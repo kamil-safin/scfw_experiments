@@ -1,13 +1,14 @@
+import time
 import numpy as np
+from scipy.linalg import norm
 
 
 def estimate_lipschitz(hess_mult_vec, n):
     Lest = 1
-    s_deactive = 0
     dirr = np.ones(n)
     if Lest == 1:
         # Estimate Lipschitz Constant
-        for Liter in range(1, 16):
+        for _ in range(1, 16):
             Dir = hess_mult_vec(dirr)
             dirr = Dir / norm(Dir)
         Hd = hess_mult_vec(dirr)
@@ -107,7 +108,6 @@ def scopt(func_x,
           print_every=100):
 
     x = x0
-    n = len(x)
     x_hist = []
     alpha_hist = []
     Q_hist = []
@@ -117,7 +117,6 @@ def scopt(func_x,
     int_start = time.time()
     time_hist.append(0)
     max_iter = sc_params['iter_SC']
-    Lest = sc_params['Lest']
     def func(xx): return (func_x(xx))[0]
     bPhase2 = False
     use_two_phase = sc_params['use_two_phase']
@@ -143,7 +142,7 @@ def scopt(func_x,
         if use_two_phase and not bPhase2:
             if nu == 2:  # conditions to go to phase 2
                 # sigma_k= #still need to add something to compute sigma
-                if lambda_k * Mf / sqrt(sigma_k) < 0.12964:
+                if lam_k * Mf / np.sqrt(sigma_k) < 0.12964:
                     bPhase2 = True
             elif nu < 3:
                 d_nu = 1  # too complicated to implement
@@ -166,7 +165,8 @@ def scopt(func_x,
                     nu_param = (nu - 2) / (4 - nu)
                     tau_k = (1 - (1 + d_k / nu_param)**(-nu_param)) / d_k
                 else:
-                    sys.exit('The value of nu is not valid')
+                    print('The value of nu is not valid')
+                    return None
         else:  # if we are in phase 2
             tau_k = 1
 
