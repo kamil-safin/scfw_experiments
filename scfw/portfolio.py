@@ -41,7 +41,6 @@ def hess_mult_portfolio(R, d, Rx):
         R -- object matrix (N x n)
         x -- weights (n)
     """
-    dtype = R.dtype
     Rd = (R @ d)
     Z = (Rd / Rx) ** 2
     return np.sum(Z)
@@ -65,9 +64,9 @@ def proj_simplex(y):
             t = (sum_y - 1) / (n - i)
         if i > 0:
             if t <= y[ind[i]] and t >= y[ind[i - 1]]:
-                break;
+                break
         elif t <= y[ind[i]]: 
-            break;
+            break
         sum_y -= y[ind[i]]
         Py[ind[i]] = 0
     Py = np.maximum(y - t, np.zeros(n)) 
