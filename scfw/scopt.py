@@ -1,7 +1,33 @@
 import time
+import scipy
 import numpy as np
-from scipy.linalg import norm
 
+
+def dot_product(x, y):
+    '''
+    dot product for vector or matrix
+    '''
+    if x.ndim == 1:
+        return np.dot(x, y)
+    if x.ndim == 2:
+        # for positive semi-definite matrices
+        return np.trace(np.conjugate(x).T.dot(y)).real
+    else:
+        print('Invalid dimension')
+        return None
+
+def norm(x):
+    '''
+    norm for vector or matrix
+    '''
+    if x.ndim == 1:
+        return scipy.linalg.norm(x)
+    if x.ndim == 2:
+        return np.sqrt(dot_product(x, x))
+    else:
+        print('Invalid dimension')
+        return None
+    
 
 def estimate_lipschitz(hess_mult_vec, n):
     Lest = 1
@@ -12,8 +38,8 @@ def estimate_lipschitz(hess_mult_vec, n):
             Dir = hess_mult_vec(dirr)
             dirr = Dir / norm(Dir)
         Hd = hess_mult_vec(dirr)
-        dHd = dirr.dot(Hd)
-        L = dHd / (dirr.dot(dirr))
+        dHd = dot_product(dirr, Hd)
+        L = dHd / (dot_product(dirr, dirr))
     return L
 
 
@@ -21,7 +47,7 @@ def conj_grad(Grad, Hopr, x, sc_params):
     """
         Computing Newton direction by conjugate gradient method
     """
-    r = -Grad - Hopr(x)
+    r = - Grad - Hopr(x)
     x_new = x
     k = 0
     conj_iter = sc_params['conj_grad_iter']
@@ -29,14 +55,13 @@ def conj_grad(Grad, Hopr, x, sc_params):
     while norm(r) > eps and k < conj_iter:
         p = r
         Hp = Hopr(p)
-        alph = r.dot(r) / (p.dot(Hp))
-        x_new = x_new + alph * p
-        r_new = r - alph * Hp
-        bet = r_new.dot(r_new) / r.dot(r)
-        p = p + bet * p
+        alpha = dot_product(r, r) / (dot_product(p, Hp))
+        x_new = x_new + alpha * p
+        r_new = r - alpha * Hp
+        beta = dot_product(r_new, r_new) / dot_product(r, r)
+        p = p + beta * p
         r = r_new
         k = k + 1
-
     return x_new
 
 
@@ -67,8 +92,9 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params):
             z = y
             L = L / beta
             diff_yz = z - y
-            f_z = f_y + grad_y.T.dot(diff_yz) + (L / 2) * norm(diff_yz) ** 2 + 1
-            while f_z > f_y + grad_y.T.dot(diff_yz) + (L / 2) * norm(diff_yz) ** 2:
+            # grad_y.T -> grad_y
+            f_z = f_y + dot_product(grad_y, diff_yz) + (L / 2) * norm(diff_yz) ** 2 + 1
+            while f_z > f_y + dot_product(grad_y, diff_yz) + (L / 2) * norm(diff_yz) ** 2:
                 L = L * beta
                 x_tmp = y - 1 / L * Grad_func(y)
                 z = prox_func(x_tmp, L)
