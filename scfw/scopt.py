@@ -29,9 +29,12 @@ def norm(x):
         return None
     
 
-def estimate_lipschitz(hess_mult_vec, n):
+def estimate_lipschitz(hess_mult_vec, n, ndim):
     Lest = 1
-    dirr = np.ones(n)
+    if ndim == 1:
+        dirr = np.ones(n)
+    elif ndim == 2:
+        dirr = np.eye(n)
     if Lest == 1:
         # Estimate Lipschitz Constant
         for _ in range(1, 16):
@@ -71,7 +74,7 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params):
     Lest = sc_params['Lest']
     fista_type = sc_params['fista_type']
     if Lest == 'estimate':
-        L = estimate_lipschitz(Hopr, n)
+        L = estimate_lipschitz(Hopr, n, ndim=x.ndim)
     elif Lest == 'backtracking':
         L = 1
     x_cur = y.copy()
