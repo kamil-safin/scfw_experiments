@@ -1,12 +1,13 @@
 import numpy as np
 
 
-def portfolio(R, x):
+def portfolio(R, x, Rx=None):
     """
         R -- object matrix (N x n)
         x -- weights (n)
-    """    
-    Rx = R @ x
+    """
+    if Rx is None:
+        Rx = R @ x
     return -np.sum(np.log(Rx)), Rx
 
 def grad_portfolio(R, x, Rx):
@@ -34,7 +35,7 @@ def hess_mult_vec(R, d, Rx):
         x -- weights (n)
     """
     Rd = R @ d
-    return R.T.dot(Rd / Rx ** 2) 
+    return R.T.dot(Rd / Rx ** 2)
 
 def hess_mult_portfolio(R, d, Rx):
     """
@@ -49,7 +50,7 @@ def linear_oracle_simplex(grad):
     grad_min = np.min(grad)
     s = np.array([el == grad_min for el in grad])
     s = s / sum(s)
-    return s     
+    return s
 
 def proj_simplex(y):
     ind = np.argsort(y)
@@ -57,7 +58,7 @@ def proj_simplex(y):
     origin_y = sum_y
     n = len(y)
     Py = y
-    for i in range(n):  
+    for i in range(n):
         t = (sum_y - 1) / (n - i)
         if (origin_y > 1 and t < 0): #for numerical errors
             sum_y = sum(y[ind[i : n - 1]])
@@ -65,9 +66,9 @@ def proj_simplex(y):
         if i > 0:
             if t <= y[ind[i]] and t >= y[ind[i - 1]]:
                 break
-        elif t <= y[ind[i]]: 
+        elif t <= y[ind[i]]:
             break
         sum_y -= y[ind[i]]
         Py[ind[i]] = 0
-    Py = np.maximum(y - t, np.zeros(n)) 
+    Py = np.maximum(y - t, np.zeros(n))
     return Py

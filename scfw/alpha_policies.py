@@ -24,7 +24,7 @@ def alpha_icml(Gap, hess_mult_v, d, Mf, nu):
     return min(1, t)
 
 
-def alpha_line_search(k, grad_function, delta_x, beta, accuracy):
+def alpha_line_search(grad_function, delta_x, beta, accuracy):
     lb = grad_function(0).T.dot(delta_x);
     t_lb = 0
     ub = grad_function(beta).T.dot(delta_x);
@@ -39,5 +39,17 @@ def alpha_line_search(k, grad_function, delta_x, beta, accuracy):
         if val > 0:
             t_ub = t
         else:
-            t_lb = t 
+            t_lb = t
     return t
+
+def alpha_L_backtrack(func_gamma,fx,gx,delta_x,L_last):
+    tau=2
+    nu=1
+    M=nu*L_last;
+    qx=gx.dot(delta_x)
+    qqx=M/2*norm(delta_x)
+    t=min(qx/(M*norm(delta_x)**2),1)
+    while func_gamma(t)>fx+t*qx+t**2*qqx:
+        M=tau*M
+        t=min(qx/(M*norm(delta_x)**2),1)
+    return t, M
