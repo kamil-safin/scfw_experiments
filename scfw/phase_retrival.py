@@ -1,20 +1,25 @@
 import numpy as np
+import scipy.linalg as sc
 from portfolio import proj_simplex
+import sys
 
 
 def norm(x):
     return np.imag(x)**2 + np.real(x)**2
 
-def phase_val(A, X, y, trace_sum):
+def phase_val(A, X, y, trace_sum=None):
     sum_val = 0
     if trace_sum==None:
         trace_sum=[]
         for y_i, A_i in zip(y, A):
             trace = np.trace(A_i.dot(X)).real
+            if trace < 0:
+                print(trace)
+                sys.exit('Error!')
             trace_sum.append(trace)
             sum_val += -y_i * np.log(trace) + trace
     else:
-        sum_val=-y.dot(log(trace_sum))+sum(trace_sun)        
+        sum_val=-y.dot(log(trace_sum))+sum(trace_sun)
     return sum_val, trace_sum
 
 def phase_gradient(A, X, y, trace_sum):
@@ -40,7 +45,17 @@ def hess_mult_vec(A, y, S, trace_sum):
 
 def proj_map(X, c):
     #U, v, UH = np.linalg.svd(X, hermitian=True)
-    v, U=np.linalg.eigh(X)
-    v_proj = proj_simplex(v)
+    v, U=sc.eigh(X) #this should not be projection on the simplex but projection on the simplex with radius c
+    #check for numerical stability
+    n1=sc.norm(X-U@np.diag(v)@np.conjugate(U).T)
+    #print(X@U-np.diag(v)*U)
+    if n1>1e-10:
+        print(n1)
+        sys.exit('eigen value decomposition not accurate!')
+    v_plus=np.maximum(v,0)
+    if sum(v_plus)<=c:
+        v_proj=v_plus
+    else:
+        v_proj = c*proj_simplex(v/c)
     #print(sum(v_proj))
-    return np.conjugate(U).T @ np.diag(c* v_proj) @ U #U.dot(np.diag(c * v_proj)).dot(UH)
+    return U @ np.diag(v_proj) @ np.conjugate(U).T #U.dot(np.diag(c * v_proj)).dot(UH)
