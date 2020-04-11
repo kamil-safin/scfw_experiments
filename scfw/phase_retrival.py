@@ -14,7 +14,7 @@ def phase_val(A, X, y, trace_sum):
             trace_sum.append(trace)
             sum_val += -y_i * np.log(trace) + trace
     else:
-        sum_val=-y.dot(log(trace_sum))+sum(trace_sun)        
+        sum_val=-y.dot(np.log(trace_sum))+sum(trace_sum)        
     return sum_val, trace_sum
 
 def phase_gradient(A, X, y, trace_sum):

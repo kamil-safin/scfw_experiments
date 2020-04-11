@@ -7,9 +7,9 @@ def alpha_standard(k):
 
 def alpha_icml(Gap, hess_mult_v, d, Mf, nu):
     e = hess_mult_v ** 0.5
-    bet = norm(d)
+    beta = norm(d)
     if nu == 2:
-        delta = Mf * bet
+        delta = Mf * beta
         t = 1 / delta * np.log(1 + Gap / (delta * e ** 2))
     elif nu == 3:
         delta = 1 / 2 * Mf * e
@@ -25,17 +25,16 @@ def alpha_icml(Gap, hess_mult_v, d, Mf, nu):
 
 
 def alpha_line_search(grad_function, delta_x, beta, accuracy):
-    lb = grad_function(0).T.dot(delta_x);
     t_lb = 0
-    ub = grad_function(beta).T.dot(delta_x);
+    ub = grad_function(beta).T.dot(delta_x)
     t_ub = beta
     t = t_ub
     while t_ub < 1 and ub < 0:
         t_ub = 1 - (1 - t_ub) / 2
-        ub = grad_function(t_ub).T.dot(delta_x);
+        ub = grad_function(t_ub).T.dot(delta_x)
     while t_ub - t_lb > accuracy:
         t = (t_lb + t_ub) / 2
-        val = grad_function(t).T.dot(delta_x);
+        val = grad_function(t).T.dot(delta_x)
         if val > 0:
             t_ub = t
         else:
@@ -45,7 +44,7 @@ def alpha_line_search(grad_function, delta_x, beta, accuracy):
 def alpha_L_backtrack(func_gamma,fx,gx,delta_x,L_last):
     tau=2
     nu=1
-    M=nu*L_last;
+    M=nu*L_last
     qx=gx.dot(delta_x)
     qqx=M/2*norm(delta_x)
     t=min(qx/(M*norm(delta_x)**2),1)
