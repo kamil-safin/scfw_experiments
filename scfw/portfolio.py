@@ -56,7 +56,7 @@ def proj_simplex(y):
     sum_y = sum(y)
     origin_y = sum_y
     n = len(y)
-    Py = y
+    Py = y.copy()
     for i in range(n):  
         t = (sum_y - 1) / (n - i)
         if (origin_y > 1 and t < 0): #for numerical errors
