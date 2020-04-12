@@ -1,4 +1,5 @@
 import numpy as np
+import sys, traceback
 
 
 def poisson(W, y, lam, x, dot_product=None):
@@ -26,7 +27,7 @@ def grad_poisson(W, y, lam, x, dot_product=None):
     n = len(x)
     N = len(y)
     if min(x) < 0:
-        print("fail")
+        sys.exit('x is not nonnegative')
     if dot_product is None:
         dot_product = np.squeeze(W @ x) # N
     e = np.ones(N)

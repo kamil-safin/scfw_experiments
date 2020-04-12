@@ -1,5 +1,5 @@
 import time
-import scipy
+import scipy.linalg as sc
 import numpy as np
 
 
@@ -21,13 +21,13 @@ def norm(x):
     norm for vector or matrix
     '''
     if x.ndim == 1:
-        return scipy.linalg.norm(x)
+        return sc.norm(x)
     if x.ndim == 2:
         return np.sqrt(dot_product(x, x))
     else:
         print('Invalid dimension')
         return None
-    
+
 
 def estimate_lipschitz(hess_mult_vec, n, ndim):
     Lest = 1
@@ -82,29 +82,38 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params):
     fista_iter = sc_params['fista_iter']
     tol = sc_params['fista_tol']
     t = 1
+    beta = 2
     for k in range(1, fista_iter + 1):
         grad_y = Grad_func(y)
+        f_y = func(y)
         if Lest == 'estimate':
             x_tmp = y - 1 / L * grad_y
             # x_tmps.append(x_tmp)
             z = prox_func(x_tmp, L)
-            f_nxt = func(z)
+            f_z = func(z)
+            diff_yz = z - y
         elif Lest == 'backtracking':
-            f_y = func(y)
-            beta = 2
             z = y
             L = L / beta
             diff_yz = z - y
             # grad_y.T -> grad_y
-            f_z = f_y + dot_product(grad_y, diff_yz) + (L / 2) * norm(diff_yz) ** 2 + 1
-            while f_z > f_y + dot_product(grad_y, diff_yz) + (L / 2) * norm(diff_yz) ** 2:
-                L = L * beta
-                x_tmp = y - 1 / L * Grad_func(y)
-                z = prox_func(x_tmp, L)
-                f_z = func(z)
-                diff_yz = z - y
-            f_nxt = func(z)
-
+            f_z = f_y+1
+        while f_z > f_y + dot_product(grad_y, diff_yz) + (L / 2) * norm(diff_yz) ** 2 or f_z > f_y:
+            L = L * beta
+            x_tmp = y - 1 / L * grad_y
+            z = prox_func(x_tmp, L)
+            f_z = func(z)
+            diff_yz = z - y
+            if L>1e+20:
+                #print(min(np.linalg.eigh(x_tmp)[0].real),np.trace(x_tmp.real),(func(x_tmp)))
+                #print(k,L,f_y,f_z)
+                #print('L too big')
+                z=prox_func(y,L)
+                f_z=f_y
+                diff_yz=z-y
+                L=L/beta
+        f_nxt = f_z
+        #print(L,f_y,f_y + dot_product(grad_y, diff_yz) + (L / 2) * norm(diff_yz) ** 2, f_cur,f_nxt)
         if f_nxt > f_cur and fista_type == 'mfista':
             x_nxt = x_cur
             f_nxt = f_cur
@@ -115,9 +124,11 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params):
         if (ndiff < tol) and (k > 1):
             print('Fista err = %3.3e; Subiter = %3d; subproblem converged!\n' % (ndiff, k))
             break
+        #if (k % 100 == 0) or k==1:
+        #    print('Fista err = %3.3e; Subiter = %3d; \n' % (ndiff, k))
         xdiff = x_nxt - x_cur
-        t_nxt = 0.5 * (1 + np.sqrt(1 + 4 * t ** 2))
-        y = x_nxt + (t - 1) / t_nxt * xdiff + t / t_nxt * zdiff
+        t_nxt = 0.5 * (1 + np.sqrt(1 + 4 * (t ** 2)))
+        y = x_nxt + (t - 1) / t_nxt * xdiff + t / t_nxt * (z-x_nxt)
         t = t_nxt
         x_cur = x_nxt
         f_cur = f_nxt
@@ -158,10 +169,15 @@ def scopt(func_x,
         def Hopr(s): return hess_mult_vec(s, extra_param)
         # compute local Lipschitz constant
 
-        Newton_dir = conj_grad(Grad, Hopr, x, sc_params)
-        def grad_func(xx): return Hopr(xx - x - Newton_dir)
-        x_nxt = fista(func, grad_func, prox_func, Hopr, x, sc_params)
+        #Newton_dir = conj_grad(Grad, Hopr, x, sc_params)
+        #if norm(Newton_dir)<1e-10:
+        #    print('boo')
+        def grad_func(xx): return Hopr(xx - x)+Grad
+        def Quad(xx): return hess_mult(xx-x,extra_param)*0.5+dot_product(Grad,xx-x)
+        x_nxt = fista(Quad, grad_func, prox_func, Hopr, x, sc_params)
         diffx = x_nxt - x
+        if norm(diffx)<1e-10:
+            print('boo')
 
         lam_k = np.sqrt(hess_mult(diffx, extra_param))
         beta_k = Mf * norm(diffx)
