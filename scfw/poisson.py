@@ -1,14 +1,16 @@
 import numpy as np
+import sys, traceback
 
 
-def poisson(W, y, lam, x):
+def poisson(W, y, lam, x, dot_product=None):
     """
         W -- object matrix (N x n)
         y -- labels (N)
         x -- weights (n)
         lam -- regularization param
-    """ 
-    dot_product = W @ x 
+    """
+    if dot_product is None:
+        dot_product = W @ x
     fst_term = np.sum(dot_product)
     snd_term = y.dot(np.log(dot_product))
     return fst_term - snd_term + lam * sum(x), dot_product
@@ -25,13 +27,13 @@ def grad_poisson(W, y, lam, x, dot_product=None):
     n = len(x)
     N = len(y)
     if min(x) < 0:
-        print("fail")
+        sys.exit('x is not nonnegative')
     if dot_product is None:
         dot_product = np.squeeze(W @ x) # N
-    e = np.ones(N)    
+    e = np.ones(N)
     mult = (e - (y / dot_product))
     x_term = (W.T @ mult) # n
-    return x_term.T + lam * np.ones(n)   
+    return x_term.T + lam * np.ones(n)
 
 
 def hess_poisson(W, y, x, lam, Btm):
@@ -69,4 +71,4 @@ def linear_oracle_full_simplex(grad, M):
     i_max = np.argmax(-grad)
     if grad[i_max] < 0:
         s[i_max] = M # 1 x n
-    return s    
+    return s

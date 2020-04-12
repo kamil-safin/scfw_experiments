@@ -1,18 +1,48 @@
+import time
+import scipy.linalg as sc
 import numpy as np
 
 
-def estimate_lipschitz(hess_mult_vec, n):
+def dot_product(x, y):
+    '''
+    dot product for vector or matrix
+    '''
+    if x.ndim == 1:
+        return np.dot(x, y)
+    if x.ndim == 2:
+        # for positive semi-definite matrices
+        return np.trace(np.conjugate(x).T.dot(y)).real
+    else:
+        print('Invalid dimension')
+        return None
+
+def norm(x):
+    '''
+    norm for vector or matrix
+    '''
+    if x.ndim == 1:
+        return sc.norm(x)
+    if x.ndim == 2:
+        return np.sqrt(dot_product(x, x))
+    else:
+        print('Invalid dimension')
+        return None
+
+
+def estimate_lipschitz(hess_mult_vec, n, ndim):
     Lest = 1
-    s_deactive = 0
-    dirr = np.ones(n)
+    if ndim == 1:
+        dirr = np.ones(n)
+    elif ndim == 2:
+        dirr = np.eye(n)
     if Lest == 1:
         # Estimate Lipschitz Constant
-        for Liter in range(1, 16):
+        for _ in range(1, 16):
             Dir = hess_mult_vec(dirr)
             dirr = Dir / norm(Dir)
         Hd = hess_mult_vec(dirr)
-        dHd = dirr.dot(Hd)
-        L = dHd / (dirr.dot(dirr))
+        dHd = dot_product(dirr, Hd)
+        L = dHd / (dot_product(dirr, dirr))
     return L
 
 
@@ -20,7 +50,7 @@ def conj_grad(Grad, Hopr, x, sc_params):
     """
         Computing Newton direction by conjugate gradient method
     """
-    r = -Grad - Hopr(x)
+    r = - Grad - Hopr(x)
     x_new = x
     k = 0
     conj_iter = sc_params['conj_grad_iter']
@@ -28,14 +58,13 @@ def conj_grad(Grad, Hopr, x, sc_params):
     while norm(r) > eps and k < conj_iter:
         p = r
         Hp = Hopr(p)
-        alph = r.dot(r) / (p.dot(Hp))
-        x_new = x_new + alph * p
-        r_new = r - alph * Hp
-        bet = r_new.dot(r_new) / r.dot(r)
-        p = p + bet * p
+        alpha = dot_product(r, r) / (dot_product(p, Hp))
+        x_new = x_new + alpha * p
+        r_new = r - alpha * Hp
+        beta = dot_product(r_new, r_new) / dot_product(r, r)
+        p = p + beta * p
         r = r_new
         k = k + 1
-
     return x_new
 
 
@@ -45,7 +74,7 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params):
     Lest = sc_params['Lest']
     fista_type = sc_params['fista_type']
     if Lest == 'estimate':
-        L = estimate_lipschitz(Hopr, n)
+        L = estimate_lipschitz(Hopr, n, ndim=x.ndim)
     elif Lest == 'backtracking':
         L = 1
     x_cur = y.copy()
@@ -53,28 +82,38 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params):
     fista_iter = sc_params['fista_iter']
     tol = sc_params['fista_tol']
     t = 1
+    beta = 2
     for k in range(1, fista_iter + 1):
         grad_y = Grad_func(y)
+        f_y = func(y)
         if Lest == 'estimate':
             x_tmp = y - 1 / L * grad_y
             # x_tmps.append(x_tmp)
             z = prox_func(x_tmp, L)
-            f_nxt = func(z)
+            f_z = func(z)
+            diff_yz = z - y
         elif Lest == 'backtracking':
-            f_y = func(y)
-            beta = 2
             z = y
             L = L / beta
             diff_yz = z - y
-            f_z = f_y + grad_y.T.dot(diff_yz) + (L / 2) * norm(diff_yz) ** 2 + 1
-            while f_z > f_y + grad_y.T.dot(diff_yz) + (L / 2) * norm(diff_yz) ** 2:
-                L = L * beta
-                x_tmp = y - 1 / L * Grad_func(y)
-                z = prox_func(x_tmp, L)
-                f_z = func(z)
-                diff_yz = z - y
-            f_nxt = func(z)
-
+            # grad_y.T -> grad_y
+            f_z = f_y+1
+        while f_z > f_y + dot_product(grad_y, diff_yz) + (L / 2) * norm(diff_yz) ** 2 or f_z > f_y:
+            L = L * beta
+            x_tmp = y - 1 / L * grad_y
+            z = prox_func(x_tmp, L)
+            f_z = func(z)
+            diff_yz = z - y
+            if L>1e+20:
+                #print(min(np.linalg.eigh(x_tmp)[0].real),np.trace(x_tmp.real),(func(x_tmp)))
+                #print(k,L,f_y,f_z)
+                #print('L too big')
+                z=prox_func(y,L)
+                f_z=f_y
+                diff_yz=z-y
+                L=L/beta
+        f_nxt = f_z
+        #print(L,f_y,f_y + dot_product(grad_y, diff_yz) + (L / 2) * norm(diff_yz) ** 2, f_cur,f_nxt)
         if f_nxt > f_cur and fista_type == 'mfista':
             x_nxt = x_cur
             f_nxt = f_cur
@@ -85,9 +124,11 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params):
         if (ndiff < tol) and (k > 1):
             print('Fista err = %3.3e; Subiter = %3d; subproblem converged!\n' % (ndiff, k))
             break
+        #if (k % 100 == 0) or k==1:
+        #    print('Fista err = %3.3e; Subiter = %3d; \n' % (ndiff, k))
         xdiff = x_nxt - x_cur
-        t_nxt = 0.5 * (1 + np.sqrt(1 + 4 * t ** 2))
-        y = x_nxt + (t - 1) / t_nxt * xdiff + t / t_nxt * zdiff
+        t_nxt = 0.5 * (1 + np.sqrt(1 + 4 * (t ** 2)))
+        y = x_nxt + (t - 1) / t_nxt * xdiff + t / t_nxt * (z-x_nxt)
         t = t_nxt
         x_cur = x_nxt
         f_cur = f_nxt
@@ -107,7 +148,6 @@ def scopt(func_x,
           print_every=100):
 
     x = x0
-    n = len(x)
     x_hist = []
     alpha_hist = []
     Q_hist = []
@@ -117,7 +157,6 @@ def scopt(func_x,
     int_start = time.time()
     time_hist.append(0)
     max_iter = sc_params['iter_SC']
-    Lest = sc_params['Lest']
     def func(xx): return (func_x(xx))[0]
     bPhase2 = False
     use_two_phase = sc_params['use_two_phase']
@@ -130,10 +169,15 @@ def scopt(func_x,
         def Hopr(s): return hess_mult_vec(s, extra_param)
         # compute local Lipschitz constant
 
-        Newton_dir = conj_grad(Grad, Hopr, x, sc_params)
-        def grad_func(xx): return Hopr(xx - x - Newton_dir)
-        x_nxt = fista(func, grad_func, prox_func, Hopr, x, sc_params)
+        #Newton_dir = conj_grad(Grad, Hopr, x, sc_params)
+        #if norm(Newton_dir)<1e-10:
+        #    print('boo')
+        def grad_func(xx): return Hopr(xx - x)+Grad
+        def Quad(xx): return hess_mult(xx-x,extra_param)*0.5+dot_product(Grad,xx-x)
+        x_nxt = fista(Quad, grad_func, prox_func, Hopr, x, sc_params)
         diffx = x_nxt - x
+        if norm(diffx)<1e-10:
+            print('boo')
 
         lam_k = np.sqrt(hess_mult(diffx, extra_param))
         beta_k = Mf * norm(diffx)
@@ -143,7 +187,7 @@ def scopt(func_x,
         if use_two_phase and not bPhase2:
             if nu == 2:  # conditions to go to phase 2
                 # sigma_k= #still need to add something to compute sigma
-                if lambda_k * Mf / sqrt(sigma_k) < 0.12964:
+                if lam_k * Mf / np.sqrt(sigma_k) < 0.12964:
                     bPhase2 = True
             elif nu < 3:
                 d_nu = 1  # too complicated to implement
@@ -166,7 +210,8 @@ def scopt(func_x,
                     nu_param = (nu - 2) / (4 - nu)
                     tau_k = (1 - (1 + d_k / nu_param)**(-nu_param)) / d_k
                 else:
-                    sys.exit('The value of nu is not valid')
+                    print('The value of nu is not valid')
+                    return None
         else:  # if we are in phase 2
             tau_k = 1
 
