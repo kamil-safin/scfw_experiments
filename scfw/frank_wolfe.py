@@ -1,5 +1,4 @@
 import time
-
 import numpy as np
 
 from .alpha_policies import *
@@ -64,7 +63,7 @@ def frank_wolfe(fun_x,
             break
 
         #find optimal
-        grad = grad_x(x, extra_params)
+        grad = grad_x(x, dot_product)
         if alpha_policy != 'lloo':
             s = linear_oracle(grad)
             delta_x = x - s
@@ -75,7 +74,7 @@ def frank_wolfe(fun_x,
         elif alpha_policy == 'backtracking':
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
             my_func_beta = lambda beta: fun_x(beta*s+(1-beta)*x,beta*extra_param_s*(1-beta)*extra_param_s)[0]
-            alpha, L_last = alpha_L_backtrack(my_func_beta,Q,grad,-delta_x,L_last)
+            alpha, L_last = alpha_L_backtrack(my_func_beta, f, grad, -delta_x,L_last)
         elif alpha_policy == 'line_search':
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
             if min(extra_param_s) == 0: #if 0 it is not defines and beta is adjusted
@@ -83,24 +82,24 @@ def frank_wolfe(fun_x,
             else:
                 beta = 1  
             my_grad_beta = lambda beta: grad_beta(x, s, beta, dot_product, extra_param_s)   
-            alpha = alpha_line_search(k, my_grad_beta, -delta_x, beta, line_search_tol)
+            alpha = alpha_line_search(my_grad_beta, -delta_x, beta, line_search_tol)
         elif alpha_policy == 'icml':
             hess_mult = hess_mult_x(s - x, dot_product)
             alpha = alpha_icml(Gap, hess_mult, -delta_x, Mf, nu)
         elif alpha_policy == 'lloo':
             if k == 1:
-                hess_val = hess(x, extra_params)
+                hess_val = hess(x, dot_product)
                 L = max(np.linalg.eigvalsh(hess_val))
                 c = 1 + Mf * diam_X * np.sqrt(L) / 2
                 r = 1
-            hess_func = lambda x: hess(x, extra_params)
+            hess_func = lambda x: hess(x, dot_product)
             alpha, r, L, c = alpha_lloo(x, hess_func, r, L, c, Mf, sigma_f, diam_X, rho)
             s = linear_oracle(x, r, grad)
             delta_x = x - s
             Gap = grad @ delta_x
 
-        lower_bound = max(lower_bound, Q - Gap)
-        upper_bound = min(upper_bound, Q)
+        lower_bound = max(lower_bound, f - Gap)
+        upper_bound = min(upper_bound, f)
         # filling history
         x_hist.append(x)
         alpha_hist.append(alpha)
