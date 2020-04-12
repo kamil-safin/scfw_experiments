@@ -1,7 +1,9 @@
+import sys
+
 import numpy as np
 import scipy.linalg as sc
-from portfolio import proj_simplex
-import sys
+
+from scfw.portfolio import proj_simplex
 
 
 def norm(x):

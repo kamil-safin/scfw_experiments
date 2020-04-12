@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from alpha_policies import *
+from .alpha_policies import *
 
 
 def frank_wolfe(fun_x,
@@ -26,7 +26,7 @@ def frank_wolfe(fun_x,
     """
         fun_x -- function, outputs function value and extra parameters
         grad_x -- grad value
-        grad_beta -- grad velue for convex combination
+        grad_beta -- grad value for convex combination
         hess_mult_x -- Hessian multiplies by x on both sides
         hess -- Hessian computation (for lloo)
         extra_fun -- extra function used to transfer to other methods
@@ -34,6 +34,7 @@ def frank_wolfe(fun_x,
         nu -- ?
         linear_oracle -- ?
         x_0 -- starting point (n)
+        fw_params -- ?
         alpha_policy -- name of alpha changing policy function
         eps -- epsilon
         print_every -- print results every print_every steps
@@ -46,7 +47,7 @@ def frank_wolfe(fun_x,
     x_hist = []
     alpha_hist = []
     Gap_hist = []
-    Q_hist = []
+    f_hist = []
     time_hist = [0]
     grad_hist = []
 
@@ -57,8 +58,8 @@ def frank_wolfe(fun_x,
     L_last=1
     for k in range(1, max_iter + 1):
         start_time = time.time()
-        Q, extra_params = fun_x(x)
-        if min(extra_params) < -1e-10: #this is a way to know if the gradient is defined on x
+        f, dot_product = fun_x(x)
+        if min(dot_product) < -1e-10: #this is a way to know if the gradient is defined on x
             print("gradient is not defined")
             break
 
@@ -80,11 +81,11 @@ def frank_wolfe(fun_x,
             if min(extra_param_s) == 0: #if 0 it is not defines and beta is adjusted
                 beta = 0.5
             else:
-                beta = 1
-            my_grad_beta = lambda beta: grad_beta(x, s, beta, extra_params, extra_param_s)
-            alpha = alpha_line_search(my_grad_beta, -delta_x, beta, line_search_tol)
+                beta = 1  
+            my_grad_beta = lambda beta: grad_beta(x, s, beta, dot_product, extra_param_s)   
+            alpha = alpha_line_search(k, my_grad_beta, -delta_x, beta, line_search_tol)
         elif alpha_policy == 'icml':
-            hess_mult = hess_mult_x(s - x, extra_params)
+            hess_mult = hess_mult_x(s - x, dot_product)
             alpha = alpha_icml(Gap, hess_mult, -delta_x, Mf, nu)
         elif alpha_policy == 'lloo':
             if k == 1:
@@ -104,7 +105,7 @@ def frank_wolfe(fun_x,
         x_hist.append(x)
         alpha_hist.append(alpha)
         Gap_hist.append(Gap)
-        Q_hist.append(Q)
+        f_hist.append(f)
         grad_hist.append(grad)
         time_hist.append(time.time() - start_time)
 
@@ -118,21 +119,21 @@ def frank_wolfe(fun_x,
         if criterion <= eps:
 
             x_hist.append(x)
-            Q_hist.append(Q)
-            Q, _ = fun_x(x)
+            f_hist.append(f)
+            f, _ = fun_x(x)
             print('Convergence achieved!')
             #print(f'x = {x}')
             #print(f'v = {v}')
             print(f'iter = {k}, stepsize = {alpha}, crit = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}')
-            return x, alpha_hist, Gap_hist, Q_hist, time_hist, grad_hist
-
-
+            return x, alpha_hist, Gap_hist, f_hist, time_hist, grad_hist
+                  
+        
         if k % print_every == 0 or k == 1:
             if not debug_info:
                 print(f'iter = {k}, stepsize = {alpha}, criterion = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}')
             else:
                 print(k)
-                print(f'Q = {Q}')
+                print(f'f = {f}')
                 print(f's = {np.nonzero(s)}')
                 print(f'Gap = {Gap}')
                 print(f'alpha = {alpha}')
@@ -145,7 +146,7 @@ def frank_wolfe(fun_x,
                 #print(f'x non zero: {list(zip(x_nz, np.nonzero(x)[0]))}\n')
 
     x_hist.append(x)
-    Q_hist.append(Q)
+    f_hist.append(f)
     int_end = time.time()
     print(int_end - int_start)
-    return x, alpha_hist, Gap_hist, Q_hist, time_hist, grad_hist
+    return x, alpha_hist, Gap_hist, f_hist, time_hist, grad_hist
