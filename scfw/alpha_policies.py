@@ -23,6 +23,13 @@ def alpha_icml(Gap, hess_mult_v, d, Mf, nu):
             t = 1 / delta * (1 - (1 + (-delta * Gap * const / (e ** 2))) ** (-1 / const))
     return min(1, t)
 
+def alpha_lloo(x, hess_func, r_k, L_k, c_k, Mf, sigma_f, diam_X, rho):
+    r_k = r_k * np.sqrt(np.exp(-sigma_f / (12 * rho**2 * c_k * L_k)))
+    hess = hess_func(x)
+    L_k = max(np.linalg.eigvalsh(hess))
+    c_k = 1 + Mf * diam_X * np.sqrt(L_k) / 2
+    alpha_k = sigma_f / (6 * c_k * L_k * rho**2)
+    return alpha_k, r_k, L_k, c_k
 
 def alpha_line_search(grad_function, delta_x, beta, accuracy):
     t_lb = 0
