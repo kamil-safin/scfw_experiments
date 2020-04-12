@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from alpha_policies import *
+from .alpha_policies import *
 
 
 def frank_wolfe(fun_x,
