@@ -25,6 +25,8 @@ def hess_portfolio(R, d, Rx):
         x -- weights (n)
     """
     dtype = R.dtype
+    if Rx is None:
+        Rx = R.dot(d)
     Z = R / Rx.reshape(-1, 1)
     return np.einsum('ij,ik->jk', Z, Z, dtype=dtype)
 
