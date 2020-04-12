@@ -64,12 +64,10 @@ def frank_wolfe(fun_x,
 
         #find optimal
         grad = grad_x(x, extra_params)
-        s = linear_oracle(grad)
-
-        delta_x = x - s
-        Gap = grad @ delta_x
-        lower_bound = max(lower_bound, Q - Gap)
-        upper_bound = min(upper_bound, Q)
+        if alpha_policy != 'lloo':
+            s = linear_oracle(grad)
+            delta_x = x - s
+            Gap = grad @ delta_x
 
         if alpha_policy == 'standard':
             alpha = alpha_standard(k)
@@ -96,7 +94,12 @@ def frank_wolfe(fun_x,
                 r = 1
             hess_func = lambda x: hess(x, extra_params)
             alpha, r, L, c = alpha_lloo(x, hess_func, r, L, c, Mf, sigma_f, diam_X, rho)
+            s = linear_oracle(x, r, grad)
+            delta_x = x - s
+            Gap = grad @ delta_x
 
+        lower_bound = max(lower_bound, Q - Gap)
+        upper_bound = min(upper_bound, Q)
         # filling history
         x_hist.append(x)
         alpha_hist.append(alpha)

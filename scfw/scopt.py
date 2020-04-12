@@ -157,7 +157,6 @@ def scopt(func_x,
     int_start = time.time()
     time_hist.append(0)
     max_iter = sc_params['iter_SC']
-    def func(xx): return (func_x(xx))[0]
     bPhase2 = False
     use_two_phase = sc_params['use_two_phase']
     for i in range(1, max_iter + 1):
