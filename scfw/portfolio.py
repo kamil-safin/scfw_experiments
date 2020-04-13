@@ -60,7 +60,7 @@ def proj_simplex(y):
     origin_y = sum_y
     n = len(y)
     Py = y.copy()
-    for i in range(n):  
+    for i in range(n):
         t = (sum_y - 1) / (n - i)
         if (origin_y > 1 and t < 0): #for numerical errors
             sum_y = sum(y[ind[i : n - 1]])
@@ -83,7 +83,7 @@ def llo_oracle(x, r, grad, rho):
     p_pos = np.zeros(n)
     p_pos[min_index] = sum_threshold
     p_neg = np.zeros(n)
-    sorted_indexes = (-grad).argsort()
+    sorted_indexes = (-grad).argsort() #this is ascending order which corresponds with descending order when you take grad
     k = 0
     tmp_sum = 0
     for k in range(len(sorted_indexes)):

@@ -80,8 +80,8 @@ def frank_wolfe(fun_x,
             if min(extra_param_s) == 0: #if 0 it is not defines and beta is adjusted
                 beta = 0.5
             else:
-                beta = 1  
-            my_grad_beta = lambda beta: grad_beta(x, s, beta, dot_product, extra_param_s)   
+                beta = 1
+            my_grad_beta = lambda beta: grad_beta(x, s, beta, dot_product, extra_param_s)
             alpha = alpha_line_search(my_grad_beta, -delta_x, beta, line_search_tol)
         elif alpha_policy == 'icml':
             hess_mult = hess_mult_x(s - x, dot_product)
@@ -91,8 +91,13 @@ def frank_wolfe(fun_x,
                 hess_val = hess(x, dot_product)
                 L = max(np.linalg.eigvalsh(hess_val))
                 c = 1 + Mf * diam_X * np.sqrt(L) / 2
+                print(c)
                 r = 1
             hess_func = lambda x: hess(x, dot_product)
+            hess_val = hess(x, dot_product)
+            L = max(np.linalg.eigvalsh(hess_val))
+            c = 1 + Mf * diam_X * np.sqrt(L) / 2
+            print(c)
             alpha, r, L, c = alpha_lloo(x, hess_func, r, L, c, Mf, sigma_f, diam_X, rho)
             s = linear_oracle(x, r, grad)
             delta_x = x - s
@@ -125,8 +130,8 @@ def frank_wolfe(fun_x,
             #print(f'v = {v}')
             print(f'iter = {k}, stepsize = {alpha}, crit = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}')
             return x, alpha_hist, Gap_hist, f_hist, time_hist, grad_hist
-                  
-        
+
+
         if k % print_every == 0 or k == 1:
             if not debug_info:
                 print(f'iter = {k}, stepsize = {alpha}, criterion = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}')
