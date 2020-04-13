@@ -102,16 +102,15 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params):
             L = L * beta
             x_tmp = y - 1 / L * grad_y
             z = prox_func(x_tmp, L)
-            f_z = func(z)
+            f_z =  func(z)
             diff_yz = z - y
             if L>1e+20:
-                #print(min(np.linalg.eigh(x_tmp)[0].real),np.trace(x_tmp.real),(func(x_tmp)))
-                #print(k,L,f_y,f_z)
                 #print('L too big')
                 z=prox_func(y,L)
-                f_z=f_y
+                f_z=func(z)
                 diff_yz=z-y
                 L=L/beta
+                break
         f_nxt = f_z
         #print(L,f_y,f_y + dot_product(grad_y, diff_yz) + (L / 2) * norm(diff_yz) ** 2, f_cur,f_nxt)
         if f_nxt > f_cur and fista_type == 'mfista':

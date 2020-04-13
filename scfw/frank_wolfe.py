@@ -14,6 +14,7 @@ def frank_wolfe(fun_x,
                 linear_oracle,
                 x_0,
                 FW_params,
+                lloo_oracle=None,
                 hess=None,
                 sigma_f=None,
                 diam_X=None,
@@ -40,6 +41,7 @@ def frank_wolfe(fun_x,
     """
     lower_bound = float("-inf")
     upper_bound = float("inf")
+    real_Gap = upper_bound - lower_bound
     criterion = 1e10 * eps
     x = x_0
 
@@ -87,20 +89,32 @@ def frank_wolfe(fun_x,
             hess_mult = hess_mult_x(s - x, dot_product)
             alpha = alpha_icml(Gap, hess_mult, -delta_x, Mf, nu)
         elif alpha_policy == 'lloo':
-            if k == 1:
+            s2=linear_oracle(grad)
+            delta_x2= x-s2
+            Gap = grad @ delta_x2
+            if k==1 :
                 hess_val = hess(x, dot_product)
-                L = max(np.linalg.eigvalsh(hess_val))
+                eigs=(np.linalg.eigvalsh(hess_val))
+                L =max(eigs)
+                sigma_f=min(eigs)
                 c = 1 + Mf * diam_X * np.sqrt(L) / 2
                 print(c)
-                r = 1
-            hess_func = lambda x: hess(x, dot_product)
-            alpha, r, L, c = alpha_lloo(x, hess_func, r, L, c, Mf, sigma_f, diam_X, rho=rho)
-            s = linear_oracle(x, r, grad)
+                r = np.sqrt( 6 * Gap / sigma_f)
+                alpha_llo = sigma_f/(6*c*L*rho**2)
+            else:
+                hess_func = lambda x: hess(x, dot_product)
+                eigs=(np.linalg.eigvalsh(hess_val))
+                alpha_llo, r, L, c, sigma_f = alpha_lloo(x, hess_func, r, L, c, Mf, sigma_f, diam_X, rho=rho)
+
+            s = lloo_oracle(x, r, grad)
             delta_x = x - s
-            Gap = grad @ delta_x
+            alpha = alpha_llo
+            lloo_init = False
+
 
         lower_bound = max(lower_bound, f - Gap)
         upper_bound = min(upper_bound, f)
+        real_Gap=upper_bound-lower_bound
         # filling history
         x_hist.append(x)
         alpha_hist.append(alpha)
