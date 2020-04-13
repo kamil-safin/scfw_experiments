@@ -94,11 +94,7 @@ def frank_wolfe(fun_x,
                 print(c)
                 r = 1
             hess_func = lambda x: hess(x, dot_product)
-            hess_val = hess(x, dot_product)
-            L = max(np.linalg.eigvalsh(hess_val))
-            c = 1 + Mf * diam_X * np.sqrt(L) / 2
-            print(c)
-            alpha, r, L, c = alpha_lloo(x, hess_func, r, L, c, Mf, sigma_f, diam_X, rho)
+            alpha, r, L, c = alpha_lloo(x, hess_func, r, L, c, Mf, sigma_f, diam_X, rho=rho)
             s = linear_oracle(x, r, grad)
             delta_x = x - s
             Gap = grad @ delta_x
@@ -153,4 +149,4 @@ def frank_wolfe(fun_x,
     f_hist.append(f)
     int_end = time.time()
     print(int_end - int_start)
-    return x, alpha_hist, Gap_hist, f_hist, time_hist, grad_hist
+    return x_hist, alpha_hist, Gap_hist, f_hist, time_hist, grad_hist
