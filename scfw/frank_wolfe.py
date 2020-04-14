@@ -1,4 +1,6 @@
 import time
+import sys
+
 import numpy as np
 
 from .alpha_policies import *
@@ -16,9 +18,6 @@ def frank_wolfe(fun_x,
                 FW_params,
                 lloo_oracle=None,
                 hess=None,
-                sigma_f=None,
-                diam_X=None,
-                rho=None,
                 alpha_policy='standard',
                 eps=0.001,
                 print_every=100,
@@ -56,7 +55,12 @@ def frank_wolfe(fun_x,
     int_start = time.time()
     max_iter = FW_params['iter_FW']
     line_search_tol = FW_params['line_search_tol']
+    if alpha_policy == 'lloo' or alpha_policy == 'new_lloo':
+        rho=FW_params['rho']
+        diam_X=FW_params['diam_X']
+        sigma_f=FW_params['sigma_f']
     L_last=1
+
     for k in range(1, max_iter + 1):
         start_time = time.time()
         f, dot_product = fun_x(x)
@@ -66,10 +70,9 @@ def frank_wolfe(fun_x,
 
         #find optimal
         grad = grad_x(x, dot_product)
-        if alpha_policy != 'lloo':
-            s = linear_oracle(grad)
-            delta_x = x - s
-            Gap = grad @ delta_x
+        s = linear_oracle(grad)
+        delta_x = x - s
+        Gap = grad @ delta_x
 
         if alpha_policy == 'standard':
             alpha = alpha_standard(k)
@@ -89,27 +92,31 @@ def frank_wolfe(fun_x,
             hess_mult = hess_mult_x(s - x, dot_product)
             alpha = alpha_icml(Gap, hess_mult, -delta_x, Mf, nu)
         elif alpha_policy == 'lloo':
-            s2=linear_oracle(grad)
-            delta_x2= x-s2
-            Gap = grad @ delta_x2
+            s2 = s.copy()
+            delta_x2 = delta_x.copy()
+            hess_val = hess(x, dot_product)
+            if k==1:
+                r_k=1
+                alpha=1
+            h_k = Gap
+            alpha, h_k, r_k, sigma_f = alpha_lloo(k, hess_val, alpha, h_k, r_k, sigma_f, diam_X, Mf, rho)
+            s = lloo_oracle(x, r_k, grad,rho)
+        elif alpha_policy == 'new_lloo':
+            s2 = s.copy()
+            delta_x2 = delta_x.copy()
             if k==1 :
                 hess_val = hess(x, dot_product)
                 eigs=(np.linalg.eigvalsh(hess_val))
-                L =max(eigs)
                 sigma_f=min(eigs)
-                c = 1 + Mf * diam_X * np.sqrt(L) / 2
-                print(c)
-                r = np.sqrt( 6 * Gap / sigma_f)
-                alpha_llo = sigma_f/(6*c*L*rho**2)
-            else:
-                hess_func = lambda x: hess(x, dot_product)
-                eigs=(np.linalg.eigvalsh(hess_val))
-                alpha_llo, r, L, c, sigma_f = alpha_lloo(x, hess_func, r, L, c, Mf, sigma_f, diam_X, rho=rho)
-
-            s = lloo_oracle(x, r, grad)
+                if sigma_f<0: #treat numerical issues
+                    sigma_f=1e-10
+                print(Gap)
+                h_k = Gap
+                r_k = np.sqrt( 6 * h_k / sigma_f)
+            s = lloo_oracle(x, r_k, grad,rho)
             delta_x = x - s
-            alpha = alpha_llo
-            lloo_init = False
+            hess_mult = hess_mult_x(delta_x, dot_product)
+            alpha , h_k, r_k = alpha_new_lloo(hess_mult, h_k, r_k, Mf)
 
 
         lower_bound = max(lower_bound, f - Gap)
@@ -138,13 +145,13 @@ def frank_wolfe(fun_x,
             print('Convergence achieved!')
             #print(f'x = {x}')
             #print(f'v = {v}')
-            print(f'iter = {k}, stepsize = {alpha}, crit = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}')
+            print(f'iter = {k}, stepsize = {alpha}, crit = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}, real_Gap={real_Gap}')
             return x, alpha_hist, Gap_hist, f_hist, time_hist, grad_hist
 
 
         if k % print_every == 0 or k == 1:
             if not debug_info:
-                print(f'iter = {k}, stepsize = {alpha}, criterion = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}')
+                print(f'iter = {k}, stepsize = {alpha}, criterion = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}, real_Gap={real_Gap}')
             else:
                 print(k)
                 print(f'f = {f}')
