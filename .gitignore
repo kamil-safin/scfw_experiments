@@ -6,6 +6,7 @@ updated_code/data/**
 updated_code/results/**
 data/**
 results/**
+pics
 
 # C extensions
 *.so
