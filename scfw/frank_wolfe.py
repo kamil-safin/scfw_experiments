@@ -44,7 +44,6 @@ def frank_wolfe(fun_x,
     criterion = 1e10 * eps
     x = x_0
 
-    x_hist = []
     alpha_hist = []
     Gap_hist = []
     f_hist = []
@@ -123,7 +122,8 @@ def frank_wolfe(fun_x,
         upper_bound = min(upper_bound, f)
         real_Gap=upper_bound-lower_bound
         # filling history
-        x_hist.append(x)
+        # x_hist.append(x)
+        x_last = x.copy()
         alpha_hist.append(alpha)
         Gap_hist.append(Gap)
         f_hist.append(f)
@@ -132,14 +132,14 @@ def frank_wolfe(fun_x,
 
         x = x + alpha * (s - x)
 
-        criterion = min(criterion, norm(x - x_hist[-1]) / max(1, norm(x_hist[-1])))
+        criterion = min(criterion, norm(x - x_last) / max(1, norm(x_last)))
         #criterion = Gap
         #print(upper_bound)
         #print(lower_bound)
         #criterion=(upper_bound-lower_bound)/abs(lower_bound)
         if criterion <= eps:
 
-            x_hist.append(x)
+            x_last = x.copy()
             f_hist.append(f)
             f, _ = fun_x(x)
             print('Convergence achieved!')
@@ -166,8 +166,8 @@ def frank_wolfe(fun_x,
                 #x_nz = x[np.nonzero(x)[0]]
                 #print(f'x non zero: {list(zip(x_nz, np.nonzero(x)[0]))}\n')
 
-    x_hist.append(x)
+    x_last = x
     f_hist.append(f)
     int_end = time.time()
     print(int_end - int_start)
-    return x_hist, alpha_hist, Gap_hist, f_hist, time_hist, grad_hist
+    return x_last, alpha_hist, Gap_hist, f_hist, time_hist, grad_hist
