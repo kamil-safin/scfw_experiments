@@ -19,12 +19,13 @@ def log_reg(Phi, y, x, mu, gamma):
         mu -- 1 x 1
         gamma -- const
     """
+    N, n = Phi.shape
     Phix = Phi @ x # N x 1
     log_loss = np.log(1 + np.exp(-y * Phix + mu))
-    return np.mean(log_loss) + gamma / 2 * x.dot(x), Phix
+    return np.mean(log_loss) + gamma * x.dot(x), Phix
 
 
-def grad(Phi, y, x, mu, gamma, Phix):
+def grad_log_reg(Phi, y, x, mu, gamma, Phix):
     """
         1 / N \sum_{i = 1}^N -y * Phi / (exp(y * (<Phi, x> + mu)) + 1) + gamma * x
         Phi -- N x n
@@ -36,7 +37,7 @@ def grad(Phi, y, x, mu, gamma, Phix):
     N = len(Phix)
     Phiy = Phi.multiply(y.reshape(-1, 1)) # N x n
     frac = (1 / (np.exp(y * (Phix + mu)) + 1)).reshape(-1, 1) # N x 1
-    return np.array(-1 / N * Phiy.T.dot(frac) + gamma * x.reshape(-1, 1)).flatten()
+    return -Phiy.toarray().T.dot(frac).flatten() / N + gamma * x
 
 def hess_mult_vec(Phi, y, x, mu, gamma, Phix):
     """
@@ -72,3 +73,10 @@ def hess_mult_log_reg(Phi, y, x, mu, gamma, Phix):
 #     rhs = (Phix / (1 + exp_product))**2
 #     return 1 / N * np.sum(exp_product * rhs) + gamma * x.dot(x)
 
+def linear_oracle_full_simplex(grad, M):
+    n = len(grad)
+    s = np.zeros(n)
+    i_max = np.argmax(np.abs(grad))
+    if grad[i_max] < 0:
+        s[i_max] = M # 1 x n
+    return s
