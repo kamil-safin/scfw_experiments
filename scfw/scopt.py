@@ -162,7 +162,7 @@ def scopt(func_x,
 
         start = time.time()
 
-        Q, extra_param = func_x(x)
+        Q, extra_param = func_x(x,None)
         Grad = grad_x(x, extra_param)
         def Hopr(s): return hess_mult_vec(s, extra_param)
         # compute local Lipschitz constant
