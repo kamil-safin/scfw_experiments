@@ -1,0 +1,28 @@
+# portfolio
+
+x0 = np.ones(n) / n
+terminate_tol = 1e-11
+
+#parameters for FW
+FW_params={
+    'iter_FW':50000,
+    'line_search_tol':1e-10,
+    'rho':np.sqrt(n), #parameters for ll00
+    'diam_X':np.sqrt(2),
+    'sigma_f':1,                   
+}
+
+
+sc_params={
+    #parameters for SCOPT
+    'iter_SC': 1000,
+    'Lest': 'backtracking',#,'estimate', #estimate L
+    'use_two_phase':False,
+    #FISTA parameters
+    'fista_type': 'mfista',
+    'fista_tol': 1e-5,
+    'fista_iter': 1000,
+    #Conjugate Gradient Parameters
+    'conj_grad_tol':1e-5,
+    'conj_grad_iter':1000,
+}
