@@ -68,9 +68,10 @@ def alpha_L_backtrack(func_gamma,fx,gx,delta_x,L_last,t_max):
     nu=0.25
     L=nu*L_last
     qx=gx.dot(delta_x)
-    qqx=L/2*norm(delta_x)
+    qqx=L/2*norm(delta_x,2)**2
     t=min(-qx/(L*norm(delta_x)**2),t_max)
     while func_gamma(t)>fx+t*qx+t**2*qqx:
         L=tau*L
-        t=min(-qx/(L*norm(delta_x)**2),1)
+        qqx=qqx*tau
+        t=min(-qx/(2*qqx),1)
     return t, L

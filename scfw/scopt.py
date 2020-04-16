@@ -162,7 +162,7 @@ def scopt(func_x,
 
         start = time.time()
 
-        Q, extra_param = func_x(x,None)
+        Q, extra_param = func_x(x)
         Grad = grad_x(x, extra_param)
         def Hopr(s): return hess_mult_vec(s, extra_param)
         # compute local Lipschitz constant
@@ -245,4 +245,4 @@ def scopt(func_x,
         Q_hist.append(Q)
         print('Exceed the maximum number of iterations')
     print(int_end - int_start)
-    return x, alpha_hist, Q_hist, time_hist, grad_hist
+    return x, alpha_hist, Q_hist, time_hist
