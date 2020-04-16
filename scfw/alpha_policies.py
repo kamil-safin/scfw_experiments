@@ -63,14 +63,14 @@ def alpha_line_search(grad_function, delta_x, beta, accuracy):
             t_lb = t
     return t
 
-def alpha_L_backtrack(func_gamma,fx,gx,delta_x,L_last):
+def alpha_L_backtrack(func_gamma,fx,gx,delta_x,L_last,t_max):
     tau=2
-    nu=1
-    M=nu*L_last
+    nu=0.25
+    L=nu*L_last
     qx=gx.dot(delta_x)
-    qqx=M/2*norm(delta_x)
-    t=min(qx/(M*norm(delta_x)**2),1)
+    qqx=L/2*norm(delta_x)
+    t=min(-qx/(L*norm(delta_x)**2),t_max)
     while func_gamma(t)>fx+t*qx+t**2*qqx:
-        M=tau*M
-        t=min(qx/(M*norm(delta_x)**2),1)
-    return t, M
+        L=tau*L
+        t=min(-qx/(L*norm(delta_x)**2),1)
+    return t, L

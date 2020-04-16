@@ -44,7 +44,6 @@ def frank_wolfe(fun_x,
     criterion = 1e10 * eps
     x = x_0
 
-    x_hist = []
     alpha_hist = []
     Gap_hist = []
     f_hist = []
@@ -59,12 +58,12 @@ def frank_wolfe(fun_x,
         rho=FW_params['rho']
         diam_X=FW_params['diam_X']
         sigma_f=FW_params['sigma_f']
-    L_last=1
 
     for k in range(1, max_iter + 1):
         start_time = time.time()
-        f, dot_product = fun_x(x)
+        f, dot_product = fun_x(x,dot_product=None)
         if min(dot_product) < -1e-10: #this is a way to know if the gradient is defined on x
+            print(dot_product)
             print("gradient is not defined")
             break
 
@@ -77,9 +76,16 @@ def frank_wolfe(fun_x,
         if alpha_policy == 'standard':
             alpha = alpha_standard(k)
         elif alpha_policy == 'backtracking':
+            if k==1:
+                L_last=1
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
-            my_func_beta = lambda beta: fun_x(beta*s+(1-beta)*x,beta*extra_param_s*(1-beta)*extra_param_s)[0]
-            alpha, L_last = alpha_L_backtrack(my_func_beta, f, grad, -delta_x,L_last)
+            if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
+                indexes=np.where(extra_param_s<=0)
+                beta_max=min(dot_product/(dot_product-extra_param_s))
+            else:
+                beta_max=1
+            my_func_beta = lambda beta: fun_x(beta*s+(1-beta)*x,beta*extra_param_s+(1-beta)*dot_product)[0]
+            alpha, L_last = alpha_L_backtrack(my_func_beta, f, grad, -delta_x,L_last,beta_max)
         elif alpha_policy == 'line_search':
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
             if min(extra_param_s) == 0: #if 0 it is not defines and beta is adjusted
@@ -123,30 +129,31 @@ def frank_wolfe(fun_x,
         upper_bound = min(upper_bound, f)
         real_Gap=upper_bound-lower_bound
         # filling history
-        x_hist.append(x)
+        # x_hist.append(x)
+        x_last = x.copy()
         alpha_hist.append(alpha)
         Gap_hist.append(Gap)
         f_hist.append(f)
-        grad_hist.append(grad)
+        #grad_hist.append(grad)
         time_hist.append(time.time() - start_time)
 
         x = x + alpha * (s - x)
 
-        criterion = min(criterion, norm(x - x_hist[-1]) / max(1, norm(x_hist[-1])))
+        criterion = min(criterion, norm(x - x_last) / max(1, norm(x_last)))
         #criterion = Gap
         #print(upper_bound)
         #print(lower_bound)
         #criterion=(upper_bound-lower_bound)/abs(lower_bound)
         if criterion <= eps:
 
-            x_hist.append(x)
+            x_last = x.copy()
             f_hist.append(f)
-            f, _ = fun_x(x)
+            f, _ = fun_x(x,None)
             print('Convergence achieved!')
             #print(f'x = {x}')
             #print(f'v = {v}')
             print(f'iter = {k}, stepsize = {alpha}, crit = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}, real_Gap={real_Gap}')
-            return x, alpha_hist, Gap_hist, f_hist, time_hist, grad_hist
+            return x, alpha_hist, Gap_hist, f_hist, time_hist
 
 
         if k % print_every == 0 or k == 1:
@@ -166,8 +173,8 @@ def frank_wolfe(fun_x,
                 #x_nz = x[np.nonzero(x)[0]]
                 #print(f'x non zero: {list(zip(x_nz, np.nonzero(x)[0]))}\n')
 
-    x_hist.append(x)
+    #x_hist.append(x)
     f_hist.append(f)
     int_end = time.time()
     print(int_end - int_start)
-    return x_hist, alpha_hist, Gap_hist, f_hist, time_hist, grad_hist
+    return x, alpha_hist, Gap_hist, f_hist, time_hist
