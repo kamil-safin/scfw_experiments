@@ -123,9 +123,9 @@ if __name__ == '__main__':
     foo = pool.map(run_fw, problems)
 
     total_time = time.time() - start_time
-    hours = total_time // 3600                                                                                                                                                                                                             
-    minutes = total_time // 60                                                                                                                                                                                                             
-    seconds = total_time % 60                                                                                                                                                                                                              
+    hours = total_time // 3600 
+    minutes = total_time // 60 - hours * 60
+    seconds = total_time % 60
     with open('time', 'w') as f:                                                                                                                                                                                                           
         f.write(f'{hours}h, {minutes}m, {seconds}s') 
     print(f'Total time is {hours}h, {minutes}m, {seconds}s')
