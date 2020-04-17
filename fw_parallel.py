@@ -1,4 +1,5 @@
 import os
+import time
 import pickle
 from multiprocessing import Pool
 
@@ -114,6 +115,16 @@ def run_fw(problem_name):
 
 
 if __name__ == '__main__':
+    start_time = time.time()
+
     problems = ['a4a','w4a','a1a','a2a','a3a','a5a','a6a','a7a','a8a','a9a','w1a','w2a','w3a','w5a','w6a','w7a','w8a']
     pool = Pool()
     foo = pool.map(run_fw, problems)
+
+    total_time = time.time() - start_time
+    hours = total_time // 3600                                                                                                                                                                                                             
+    minutes = total_time // 60                                                                                                                                                                                                             
+    seconds = total_time % 60                                                                                                                                                                                                              
+    with open('time', 'w') as f:                                                                                                                                                                                                           
+        f.write(f'{hours}h, {minutes}m, {seconds}s') 
+    print(f'Total time is {hours}h, {minutes}m, {seconds}s')
