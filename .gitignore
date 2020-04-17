@@ -7,6 +7,7 @@ updated_code/results/**
 data/**
 results/**
 pics
+regen_pickle.ipynb
 
 # C extensions
 *.so
