@@ -13,6 +13,7 @@ from scfw.frank_wolfe import frank_wolfe
 
 def run_fw(problem_name):
     out_dir = 'results'
+    results_file = os.path.join(out_dir, problem_name)
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
     results = {problem_name: {}}
@@ -98,7 +99,7 @@ def run_fw(problem_name):
                            eps=terminate_tol, 
                            print_every=50000, 
                            debug_info=False)
-    
+  
         results[problem_name][policy] = {
             'x': x,
             'alpha_hist': alpha_hist,
@@ -106,7 +107,7 @@ def run_fw(problem_name):
             'Q_hist': Q_hist,
             'time_hist': time_hist,
         }
-        
+
         with open(results_file, 'wb') as f:
             pickle.dump(results, f)    
 
