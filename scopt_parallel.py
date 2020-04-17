@@ -8,15 +8,22 @@ from sklearn.datasets import load_svmlight_file
 from scipy.linalg import norm
 
 import scfw.log_reg as lr
-from scfw.frank_wolfe import frank_wolfe
+from scfw.scopt import scopt
 
 
-def run_fw(problem_name):
-    out_dir = 'results'
-    results_file = os.path.join(out_dir, problem_name)
-    if not os.path.exists(out_dir):
+def run_scopt(problem_name):
+    out_dir = os.path.join('results', 'log_reg')
+    if not os.path.isdir(out_dir):
         os.mkdir(out_dir)
-    results = {problem_name: {}}
+
+    results_file = os.path.join(out_dir, problem_name + '.pckl')
+    if os.path.exists(results_file):
+        with open(results_file, 'rb') as f:
+            results = pickle.load(f)
+            results[problem_name] = {}
+    else:
+        results = {problem_name: {}}
+
     Phi, y = load_svmlight_file(os.path.join('data', problem_name))
 
     # fix classes
@@ -41,16 +48,7 @@ def run_fw(problem_name):
     r = n*0.05
     terminate_tol = 1e-20
     
-    #parameters for FW
-    FW_params={
-        'iter_FW':50000,
-        'line_search_tol':1e-10,
-        'rho':np.sqrt(n), #parameters for ll00
-        'diam_X':2,
-        'sigma_f':1,                   
-    }
-    
-    
+   
     sc_params={
         #parameters for SCOPT
         'iter_SC': 1000,
@@ -77,41 +75,31 @@ def run_fw(problem_name):
     # llo_oracle = lambda x, r, grad, rho: pr.llo_oracle(x, r, grad,rho)
     prox_func = lambda x, L: lr.projection_l1(x,r)
 
-    run_alpha_policies = ["backtracking", "standard", "line_search", "icml"]
 
+    print(f'scopt for {problem_name} started!')
+    x, alpha_hist, Q_hist, time_hist = scopt(func_x,
+            grad_x,
+            hess_mult_x,
+            hess_mult_vec_x,
+            Mf,
+            nu,
+            prox_func,
+            x0,  
+            sc_params,                                              
+            eps=terminate_tol,                                              
+            print_every=50000)
+        
+    results[problem_name]['scopt'] = {
+        'x': x,
+        'alpha_hist': alpha_hist,
+        'Q_hist': Q_hist,
+        'time_hist': time_hist,
+    }
 
-    for policy in run_alpha_policies:
-        print(f'{policy} for {problem_name} started!')
-        x, alpha_hist, Gap_hist, Q_hist, time_hist = frank_wolfe(func_x,
-                           func_beta,                                      
-                           grad_x,
-                           grad_beta,
-                           hess_mult_x,
-                           extra_func,
-                           Mf,
-                           nu,
-                           linear_oracle,                                                    
-                           x0,
-                           FW_params,
-                           hess=None, 
-                           lloo_oracle=None,                                                 
-                           alpha_policy=policy,                                                    
-                           eps=terminate_tol, 
-                           print_every=50000, 
-                           debug_info=False)
-  
-        results[problem_name][policy] = {
-            'x': x,
-            'alpha_hist': alpha_hist,
-            'Gap_hist': Gap_hist,
-            'Q_hist': Q_hist,
-            'time_hist': time_hist,
-        }
+    with open(results_file, 'wb') as f:
+        pickle.dump(results, f)    
 
-        with open(results_file, 'wb') as f:
-            pickle.dump(results, f)    
-
-        print(f'{policy} for {problem_name} finished!')
+    print(f'scopt for {problem_name} finished!')
     return results
 
 
@@ -120,7 +108,7 @@ if __name__ == '__main__':
 
     problems = ['a4a','w4a','a1a','a2a','a3a','a5a','a6a','a7a','a8a','a9a','w1a','w2a','w3a','w5a','w6a','w7a','w8a']
     pool = Pool()
-    foo = pool.map(run_fw, problems)
+    foo = pool.map(run_scopt, problems)
 
     total_time = time.time() - start_time
     hours = total_time // 3600 
