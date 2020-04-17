@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.datasets import load_svmlight_file
 from scipy.linalg import norm
 
-from scfw import log_reg as lr
+import scfw.log_reg as lr
 from scfw.frank_wolfe import frank_wolfe
 
 
