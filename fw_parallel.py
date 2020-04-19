@@ -3,6 +3,7 @@ import time
 import pickle
 from multiprocessing import Pool
 
+os.environ["OMP_NUM_THREADS"] = "1"
 import numpy as np
 from sklearn.datasets import load_svmlight_file
 from scipy.linalg import norm
@@ -12,11 +13,17 @@ from scfw.frank_wolfe import frank_wolfe
 
 
 def run_fw(problem_name):
-    out_dir = 'results'
-    results_file = os.path.join(out_dir, problem_name)
+    out_dir = os.path.join('results', 'log_reg')
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
-    results = {problem_name: {}}
+
+    results_file = os.path.join(out_dir, problem_name + '.pckl')
+    if os.path.exists(results_file):
+        with open(results_file, 'rb') as f:
+            results = pickle.load(f)
+    else:
+        results = {problem_name: {}}
+
     Phi, y = load_svmlight_file(os.path.join('data', problem_name))
 
     # fix classes
@@ -78,7 +85,7 @@ def run_fw(problem_name):
     prox_func = lambda x, L: lr.projection_l1(x,r)
 
     run_alpha_policies = ["backtracking", "standard", "line_search", "icml"]
-
+#     run_alpha_policies = ['icml']
 
     for policy in run_alpha_policies:
         print(f'{policy} for {problem_name} started!')

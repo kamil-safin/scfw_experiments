@@ -3,6 +3,7 @@ import time
 import pickle
 from multiprocessing import Pool
 
+os.environ["OMP_NUM_THREADS"] = "1"
 import numpy as np
 from sklearn.datasets import load_svmlight_file
 from scipy.linalg import norm
