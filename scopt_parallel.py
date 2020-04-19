@@ -21,7 +21,6 @@ def run_scopt(problem_name):
     if os.path.exists(results_file):
         with open(results_file, 'rb') as f:
             results = pickle.load(f)
-            results[problem_name] = {}
     else:
         results = {problem_name: {}}
 
@@ -52,7 +51,7 @@ def run_scopt(problem_name):
    
     sc_params={
         #parameters for SCOPT
-        'iter_SC': 1000,
+        'iter_SC': 50000,
         'Lest': 'backtracking',#,'estimate', #estimate L
         'use_two_phase':False,
         #FISTA parameters
