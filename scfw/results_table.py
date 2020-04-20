@@ -15,17 +15,23 @@ def results_table(results_data, error_hist_data, data_list, threshold):
         else:
             columns = ['iter', 'time', 'error', 'time per iter', 'f_val']
         for dn in sorted(data_list):
+            results = results_data[dn][dn][p]
+
             data_path = os.path.join('data', dn)
             Phi, _ = load_svmlight_file(data_path)
 
             N, n = Phi.shape
-
-            error_i = np.where(error_hist_data[p][dn] >= threshold)[0][-1]
-            error = error_hist_data[p][dn][error_i]
-            iter = error_i + 1
-            time = sum(results_data[dn][dn][p]['time_hist'][:error_i])
-            time_per_iter = time / iter
-            f_val = results_data[dn][dn][p]['Q_hist'][error_i]
+            error_hist = error_hist_data[p][dn]
+            if any(error_hist <= threshold):
+                # index of the first error which is <= than threshold
+                error_i = np.where(error_hist <= threshold)[0][0]
+            else:
+                error_i = len(error_hist) - 1
+            error = error_hist[error_i]
+            iter = error_i
+            time = sum(results['time_hist'][:iter + 1])
+            time_per_iter = time / iter if iter != 0 else time
+            f_val = results['Q_hist'][error_i]
             
             if p == 'scopt':
                 df_dict[dn] = [N, n, iter, round(time, 3), round(error, 3), round(time_per_iter, 3), round(f_val, 3)]
