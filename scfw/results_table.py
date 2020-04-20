@@ -28,7 +28,7 @@ def results_table(results_data, error_hist_data, data_list, threshold):
             else:
                 error_i = len(error_hist) - 1
             error = error_hist[error_i]
-            iter = error_i
+            iter = error_i # iter may be 0, because we may converge at x0
             time = sum(results['time_hist'][:iter + 1])
             time_per_iter = time / iter if iter != 0 else time
             f_val = results['Q_hist'][error_i]
