@@ -49,8 +49,6 @@ def frank_wolfe(fun_x,
     Gap_hist = []
     f_hist = []
     time_hist = [0]
-    grad_hist = []
-
     print('********* Algorithm starts *********')
     int_start = time.time()
     max_iter = FW_params['iter_FW']
@@ -72,7 +70,13 @@ def frank_wolfe(fun_x,
         grad = grad_x(x, extra_param)
         s = linear_oracle(grad)
         delta_x = x - s
-        Gap = grad @ delta_x
+        if x.ndim == 1:
+            Gap = grad @ delta_x
+        elif x.ndim == 2:
+            # matrix case
+            Gap = np.trace(np.conjugate(grad).T.dot(delta_x)).real
+        else:
+            print('Invalid dimension')
 
         if alpha_policy == 'standard':
             alpha = alpha_standard(k)
@@ -81,7 +85,7 @@ def frank_wolfe(fun_x,
                 L_last=1
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
             if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
-                indexes=np.where(extra_param_s<=0)
+                indexes = np.where(extra_param_s<=0)
                 beta_max=min(extra_param/(extra_param-extra_param_s))
             else:
                 beta_max=1
