@@ -1,8 +1,25 @@
 import numpy as np
 import sys, traceback
 
+import numpy as np
+import scipy
+from scipy.fftpack import idct, dct
 
-def poisson(W, y, lam, x, dot_product=None):
+
+def dct2(matr):
+    return dct(dct(matr.T, norm='ortho').T, norm='ortho')
+
+
+def idct2(matr):
+    return idct(idct(matr.T, norm='ortho').T, norm='ortho')
+
+
+#
+#   For regular matrix dataset
+#
+
+
+def poisson_matr(W, y, lam, x, dot_product=None):
     """
         W -- object matrix (N x n)
         y -- labels (N)
@@ -16,7 +33,7 @@ def poisson(W, y, lam, x, dot_product=None):
     return fst_term - snd_term + lam * sum(x), dot_product
 
 
-def grad_poisson(W, y, lam, x, dot_product=None):
+def grad_poisson_matr(W, y, lam, x, dot_product=None):
     """
         W -- object matrix (N x n)
         y -- labels (N)
@@ -36,7 +53,7 @@ def grad_poisson(W, y, lam, x, dot_product=None):
     return x_term.T + lam * np.ones(n)
 
 
-def hess_poisson(W, y, x, lam, Btm):
+def hess_poisson_matr(W, y, x, lam, Btm):
     """
         W -- object matrix (N x n)
         y -- labels (N)
@@ -47,7 +64,7 @@ def hess_poisson(W, y, x, lam, Btm):
     fst_einsum = y.reshape(-1, 1) * snd_einsum
     return np.einsum('ij,ik->jk', fst_einsum, snd_einsum)
 
-def hess_mult_vec(W, y, s, Btm):
+def hess_mult_vec_matr(W, y, s, Btm):
     """
         W -- object matrix (N x n)
         y -- labels (N)
@@ -56,7 +73,7 @@ def hess_mult_vec(W, y, s, Btm):
     return (((W @ s) * y)/((Btm) ** 2)).dot(W)
 
 
-def hess_mult(W, y, x, Btm):
+def hess_mult_matr(W, y, x, Btm):
     """
         W -- object matrix (N x n)
         y -- labels (N)
@@ -64,6 +81,89 @@ def hess_mult(W, y, x, Btm):
     """
     num = y.dot(((W @ x) / Btm) ** 2)
     return num
+
+
+#
+#   For pictures
+#
+
+
+def A_opr(im, h):
+    return scipy.ndimage.convolve(im, h, mode='wrap') # wrap -- circular convolution
+
+
+def AT_opr(im, h):
+    return A_opr(im, h)
+
+
+def A_opr_blur(im, h):
+    return A_opr(idct2(im), h)
+
+
+def AT_opr_blur(im, h):
+    return dct2(AT_opr(im, h))
+
+
+def poisson_pict(Y, X, h, mu, Ax=None):
+    """
+        Y -- reconstructed picture (M x N)
+        X -- picture (M x N)
+        h -- convolution filter
+        mu -- additional factor (const)
+        Ax -- A_opr(X) (M x N)
+    """
+    if Ax is None:
+        Ax = A_opr_blur(X, h)
+    fst_term = np.sum(Ax) + mu
+    snd_term = Y.dot(np.log(Ax + mu))
+    return fst_term - snd_term, Ax
+
+
+def grad_pict(Y, X, h, mu, Ax=None):
+    """
+        Y -- reconstructed picture (M x N)
+        X -- picture (M x N)
+        h -- convolution filter
+        mu -- additional factor (const)
+        Ax -- A_opr(X) (M x N)
+    """
+    if Ax is None:
+        Ax = A_opr_blur(x, h)
+    denom = Ax + mu
+    return AT_opr_blur(1 - Y / denom, h)
+
+
+def hess_mult_vec_pict(Y, X, h, mu, Ax=None):
+    """ H x
+        Y -- reconstructed picture (M x N)
+        X -- matrix (M x N)
+        h -- convolution filter
+        mu -- additional factor (const)
+        Ax -- A_opr(X) (M x N)
+    """
+    if Ax is None:
+        Ax = A_opr_blur(X, h)
+    denom = Ax + mu
+    fst = Y / (denom**2)
+    snd = A_opr_blur(X, h)
+    return AT_opr_blur(fst * snd, h)
+
+
+def hess_mult_pict(Y, X, h, mu, Ax=None):
+    """ x^T H x
+        Y -- reconstructed picture (M x N)
+        X -- matrix (M x N)
+        h -- convolution filter
+        mu -- additional factor (const)
+        Ax -- A_opr(X) (M x N)
+    """
+    if Ax is None:
+        Ax = A_opr_blur(X, h)
+    denom = Ax + mu
+    fst = Y / (denom**2)
+    snd = A_opr_blur(X, h)**2
+    return (fst * snd).sum()
+
 
 def linear_oracle_full_simplex(grad, M):
     n = len(grad)
