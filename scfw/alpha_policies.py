@@ -1,7 +1,31 @@
 import numpy as np
 import scipy.linalg as sc
-from scipy.linalg import norm
 
+
+def dot_product(x, y):
+    '''
+    dot product for vector or matrix
+    '''
+    if x.ndim == 1:
+        return np.dot(x, y)
+    if x.ndim == 2:
+        # for positive semi-definite matrices
+        return np.trace(np.conjugate(x).T.dot(y)).real
+    else:
+        print('Invalid dimension')
+        return None
+
+def norm(x):
+    '''
+    norm for vector or matrix
+    '''
+    if x.ndim == 1:
+        return sc.norm(x)
+    if x.ndim == 2:
+        return np.sqrt(dot_product(x, x))
+    else:
+        print('Invalid dimension')
+        return None
 
 def alpha_standard(k):
     return 2 / (k + 2)
@@ -48,15 +72,18 @@ def alpha_new_lloo(hess_mult, h_k, r_k, Mf):
 
 def alpha_line_search(grad_function, delta_x, beta, accuracy):
     t_lb = 0
-    ub = grad_function(beta).T.dot(delta_x)
+    ub = dot_product(grad_function(beta), delta_x)
+    #ub = grad_function(beta).T.dot(delta_x)
     t_ub = beta
     t = t_ub
     while t_ub < 1 and ub < 0:
         t_ub = 1 - (1 - t_ub) / 2
-        ub = grad_function(t_ub).T.dot(delta_x)
+        ub = dot_product(grad_function(t_ub), delta_x)
+        #ub = grad_function(t_ub).T.dot(delta_x)
     while t_ub - t_lb > accuracy:
         t = (t_lb + t_ub) / 2
-        val = grad_function(t).T.dot(delta_x)
+        val = dot_product(grad_function(t), delta_x)
+        #val = grad_function(t).T.dot(delta_x)
         if val > 0:
             t_ub = t
         else:
@@ -67,8 +94,8 @@ def alpha_L_backtrack(func_gamma,fx,gx,delta_x,L_last,t_max):
     tau=2
     nu=0.25
     L=nu*L_last
-    qx=gx.dot(delta_x)
-    qqx=L/2*norm(delta_x,2)**2
+    qx = dot_product(gx, delta_x)
+    qqx=L/2*norm(delta_x)**2
     t=min(-qx/(L*norm(delta_x)**2),t_max)
     while func_gamma(t)>fx+t*qx+t**2*qqx:
         L=tau*L

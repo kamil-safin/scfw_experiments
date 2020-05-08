@@ -49,8 +49,6 @@ def frank_wolfe(fun_x,
     Gap_hist = []
     f_hist = []
     time_hist = [0]
-    grad_hist = []
-
     print('********* Algorithm starts *********')
     int_start = time.time()
     max_iter = FW_params['iter_FW']
@@ -72,7 +70,13 @@ def frank_wolfe(fun_x,
         grad = grad_x(x, extra_param)
         s = linear_oracle(grad)
         delta_x = x - s
-        Gap = grad @ delta_x
+        if x.ndim == 1:
+            Gap = grad @ delta_x
+        elif x.ndim == 2:
+            # matrix case
+            Gap = np.trace(np.conjugate(grad).T.dot(delta_x)).real
+        else:
+            print('Invalid dimension')
 
         if alpha_policy == 'standard':
             alpha = alpha_standard(k)

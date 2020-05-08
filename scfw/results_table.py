@@ -17,6 +17,10 @@ def results_table(results_data, error_hist_data, data_list, threshold):
         for dn in sorted(data_list):
             results = results_data[dn][dn][p]
 
+            if results['time_hist'][0] == 0:
+                results['time_hist'] = results[data_name][data_name][p]['time_hist'][1:]
+                results['Q_hist'] = results[data_name][data_name][p]['Q_hist'][1:]
+
             data_path = os.path.join('data', dn)
             Phi, _ = load_svmlight_file(data_path)
 
@@ -28,9 +32,9 @@ def results_table(results_data, error_hist_data, data_list, threshold):
             else:
                 error_i = len(error_hist) - 1
             error = error_hist[error_i]
-            iter = error_i
-            time = sum(results['time_hist'][:iter + 1])
-            time_per_iter = time / iter if iter != 0 else time
+            iter = error_i + 1
+            time = sum(results['time_hist'][:iter])
+            time_per_iter = time / iter
             f_val = results['Q_hist'][error_i]
             
             if p == 'scopt':
