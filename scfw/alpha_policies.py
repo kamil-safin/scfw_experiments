@@ -35,7 +35,7 @@ def alpha_icml(Gap, hess_mult_v, d, Mf, nu):
     beta = norm(d)
     if nu == 2:
         delta = Mf * beta
-        t = 1 / delta * np.log(1 + Gap / (delta * e ** 2))
+        t = 1 / delta * np.log(1 + (Gap*delta) / ( e ** 2))
     elif nu == 3:
         delta = 1 / 2 * Mf * e
         t = Gap / (Gap * delta + e ** 2)
