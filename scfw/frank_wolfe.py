@@ -85,8 +85,8 @@ def frank_wolfe(fun_x,
                 L_last=1
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
             if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
-                indexes = np.where(extra_param_s<=0)
-                beta_max=min(extra_param/(extra_param-extra_param_s))
+                indexes=np.where(extra_param_s<=0)
+                beta_max=min(extra_param(indexes)/(extra_param(indexes)-extra_param_s(indexes)))
             else:
                 beta_max=1
             my_func_beta = lambda beta: func_beta(x,s,beta,extra_param,extra_param_s)[0]

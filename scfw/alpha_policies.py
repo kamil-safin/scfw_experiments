@@ -35,7 +35,7 @@ def alpha_icml(Gap, hess_mult_v, d, Mf, nu):
     beta = norm(d)
     if nu == 2:
         delta = Mf * beta
-        t = 1 / delta * np.log(1 + Gap / (delta * e ** 2))
+        t = 1 / delta * np.log(1 + (Gap*delta) / ( e ** 2))
     elif nu == 3:
         delta = 1 / 2 * Mf * e
         t = Gap / (Gap * delta + e ** 2)
@@ -100,5 +100,5 @@ def alpha_L_backtrack(func_gamma,fx,gx,delta_x,L_last,t_max):
     while func_gamma(t)>fx+t*qx+t**2*qqx:
         L=tau*L
         qqx=qqx*tau
-        t=min(-qx/(2*qqx),1)
+        t=min(-qx/(2*qqx),t_max)
     return t, L

@@ -11,7 +11,7 @@ import numpy as np
 #     Phix = Phi * x # N x 1
 #     return np.log(1 + np.exp(-y * (Phix + mu))) # N x 1
 
-def log_reg(Phi, y, x, mu, gamma, exp_product=None):
+def log_reg(Phi, y, x, mu, gamma,mult, exp_product=None):
     """
         Phi -- N x n
         y -- N x 1
@@ -24,9 +24,9 @@ def log_reg(Phi, y, x, mu, gamma, exp_product=None):
         Phix = Phi @ x # N x 1
         exp_product= np.exp(-y * (Phix + mu))
     log_loss = np.log(1 + exp_product)
-    return np.sum(log_loss) + gamma * np.linalg.norm(x,2)**2, exp_product
+    return np.sum(log_loss)*mult/N + gamma*mult/2 * np.linalg.norm(x,2)**2, exp_product
 
-def log_reg_expanded(Phi, y, x, mu, gamma, exp_product=None):
+def log_reg_expanded(Phi, y, x, mu, gamma,mult, exp_product=None):
     """
         Phi -- N x n
         y -- N x 1
@@ -41,10 +41,10 @@ def log_reg_expanded(Phi, y, x, mu, gamma, exp_product=None):
         Phix = Phi @ x[0:n] # N x 1
         exp_product= np.exp(-y * (Phix + mu))
     log_loss = np.log(1 + exp_product)
-    return np.sum(log_loss) + gamma * x[n], exp_product
+    return np.sum(log_loss)*mult/N+ gamma/2*mult * x[n], exp_product
 
 
-def grad_log_reg(Phi, y, x, mu, gamma, exp_product):
+def grad_log_reg(Phi, y, x, mu, gamma, exp_product,mult):
     """
         1 / N \sum_{i = 1}^N -y * Phi / (exp(y * (<Phi, x> + mu)) + 1) + gamma * x
         Phi -- N x n
@@ -54,10 +54,10 @@ def grad_log_reg(Phi, y, x, mu, gamma, exp_product):
         gamma -- const
     """
     N = len(exp_product)
-    tot=Phi.T@(-y*exp_product/(exp_product+1))+2*gamma*x # n x 1
+    tot=Phi.T@(-y*exp_product/(exp_product+1))*mult/N+gamma*x*mult # n x 1
     return tot
 
-def grad_log_reg_extended(Phi, y, mu, gamma, exp_product):
+def grad_log_reg_extended(Phi, y, mu, gamma,exp_product,mult):
     """
         1 / N \sum_{i = 1}^N -y * Phi / (exp(y * (<Phi, x> + mu)) + 1) + gamma * x
         Phi -- N x n
@@ -66,11 +66,11 @@ def grad_log_reg_extended(Phi, y, mu, gamma, exp_product):
         mu -- 1 x 1
         gamma -- const
     """
-    grad_x=grad_log_reg(Phi, y, mu, gamma, exp_product)
+    grad_x=grad_log_reg(Phi, y, mu, gamma, exp_product,mult)
     grad=grad_x.append(gamma)
     return grad
 
-def hess(Phi, y, mu, gamma, exp_product,s):
+def hess(Phi, y, mu, gamma, exp_product,s,mult):
     """
         Phi -- N x n
         y -- N x 1
@@ -86,9 +86,9 @@ def hess(Phi, y, mu, gamma, exp_product,s):
     Mat=Phi_prod.T@Phi_prod
     if mat.shape[0]!=n:
         sys.exit()
-    return Mat+gamma*np.eye(n)
+    return Mat*mult/N+gamma*np.eye(n)*mult
 
-def hess_mult_vec(Phi, y, mu, gamma, exp_product,s):
+def hess_mult_vec(Phi, y, mu, gamma, exp_product,s,mult):
     """
         Phi -- N x n
         y -- N x 1
@@ -100,9 +100,9 @@ def hess_mult_vec(Phi, y, mu, gamma, exp_product,s):
     N = len(exp_product)
     frac = (-y*exp_product) / (1 + exp_product)  # N x 1
     Phis=Phi@s
-    return (Phi.T@frac)*(frac.dot(Phis))+2*gamma*s
+    return (Phi.T@frac)*(frac.dot(Phis))*mult/N+gamma*s*mult
 
-def hess_mult_vec_extended(Phi, y, mu, gamma, exp_product,s):
+def hess_mult_vec_extended(Phi, y, mu, gamma, exp_product,s,mult):
     """
         Phi -- N x n
         y -- N x 1
@@ -112,11 +112,11 @@ def hess_mult_vec_extended(Phi, y, mu, gamma, exp_product,s):
         s -- n+1 x 1
     """
     n=Phi.shape[1]
-    hess_vec=hess_mult_vec(Phi, y, mu, gamma, exp_product,s[0:n])
+    hess_vec=hess_mult_vec(Phi, y, mu, gamma, exp_product,s[0:n],mult)
     hess_vec=hess_vec.append(0)
     return hess_vec
 
-def hess_mult_log_reg(Phi, y,mu, gamma, exp_product,s):
+def hess_mult_log_reg(Phi, y,mu, gamma, exp_product,s,mult):
     """
         Phi -- N x n
         mu -- 1 x 1
@@ -127,9 +127,9 @@ def hess_mult_log_reg(Phi, y,mu, gamma, exp_product,s):
     N = len(exp_product)
     frac = (y*exp_product) / (1 + exp_product)  # N x 1
     Phis=Phi@s
-    return (Phis.T@frac)**2+2*gamma*np.linalg.norm(s,2)**2
+    return (Phis.T@frac)**2*mult/N+gamma*np.linalg.norm(s,2)**2*mult
 
-def hess_mult_log_reg_extended(Phi, y,mu, gamma, exp_product,s):
+def hess_mult_log_reg_extended(Phi, y,mu, gamma, exp_product,s,mult):
     """
         Phi -- N x n
         mu -- 1 x 1
@@ -137,7 +137,7 @@ def hess_mult_log_reg_extended(Phi, y,mu, gamma, exp_product,s):
         Phix -- N x 1
         s -- n+1 x 1
     """
-    return hess_mult_log_reg(Phi, y,mu, gamma, exp_product,s[0:n])
+    return hess_mult_log_reg(Phi, y,mu, gamma, exp_product,s[0:n],mult)
 
 
 def linear_oracle_l1_level_set(c, M):
