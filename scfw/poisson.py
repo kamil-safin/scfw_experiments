@@ -3,15 +3,7 @@ import sys, traceback
 
 import numpy as np
 import scipy
-from scipy.fftpack import idct, dct
-
-
-def dct2(matr):
-    return dct(dct(matr.T, norm='ortho').T, norm='ortho')
-
-
-def idct2(matr):
-    return idct(idct(matr.T, norm='ortho').T, norm='ortho')
+from scipy.fftpack import idct, dct, dctn, idctn
 
 
 #
@@ -89,19 +81,19 @@ def hess_mult_matr(W, y, x, Btm):
 
 
 def A_opr(im, h):
-    return scipy.ndimage.convolve(im, h, mode='wrap') # wrap -- circular convolution
+    return scipy.ndimage.convolve(im.astype(float), h, mode='wrap') # wrap -- circular convolution
 
 
 def AT_opr(im, h):
-    return A_opr(im, h)
+    return A_opr(im.astype(float), h)
 
 
 def A_opr_blur(im, h):
-    return A_opr(idct2(im), h)
+    return A_opr(idctn(im.astype(float), norm='ortho'), h)
 
 
 def AT_opr_blur(im, h):
-    return dct2(AT_opr(im, h))
+    return dctn(AT_opr(im.astype(float), h), norm='ortho')
 
 
 def poisson_pict(Y, X, h, mu, Ax=None):
@@ -128,9 +120,10 @@ def grad_pict(Y, X, h, mu, Ax=None):
         Ax -- A_opr(X) (M x N)
     """
     if Ax is None:
-        Ax = A_opr_blur(x, h)
+        Ax = A_opr_blur(X, h)
     denom = Ax + mu
-    return AT_opr_blur(1 - Y / denom, h)
+    par = 1 - Y / denom
+    return AT_opr_blur(par, h)
 
 
 def hess_mult_vec_pict(Y, X, h, mu, Ax=None):
