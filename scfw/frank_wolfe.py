@@ -80,6 +80,9 @@ def frank_wolfe(fun_x,
 
         if alpha_policy == 'standard':
             alpha = alpha_standard(k)
+            # phase-retrival case
+            if x.ndim == 2:
+                alpha = 2 / (k + 3)
         elif alpha_policy == 'backtracking':
             if k==1:
                 L_last=1
