@@ -154,7 +154,7 @@ def hess_mult_pict(Y, X, h, mu, Ax=None):
         Ax = A_opr_blur(X, h)
     denom = Ax + mu
     fst = Y / (denom**2)
-    snd = A_opr_blur(X, h)**2
+    snd = Ax**2
     return (fst * snd).sum()
 
 
