@@ -30,22 +30,10 @@ def norm(x):
 def alpha_standard(k):
     return 2 / (k + 2)
 
-def alpha_icml(Gap, hess_mult_v, d, Mf, nu):
+def alpha_sc(Gap, hess_mult_v, d, Mf, nu):
     e = hess_mult_v ** 0.5
     beta = norm(d)
-    if nu == 2:
-        delta = Mf * beta
-        t = 1 / delta * np.log(1 + (Gap*delta) / ( e ** 2))
-    elif nu == 3:
-        delta = 1 / 2 * Mf * e
-        t = Gap / (Gap * delta + e ** 2)
-    else:
-        delta = (nu - 2) / 2 * Mf * (beta ** (3 - nu)) * e ** (nu - 2)
-        if nu == 4:
-            t = 1 / delta * (1 - np.exp(-delta * Gap / (e ** 2)))
-        elif nu < 4 and nu > 2:
-            const = (4 - nu) / (nu - 2)
-            t = 1 / delta * (1 - (1 + (-delta * Gap * const / (e ** 2))) ** (-1 / const))
+    t, _=copute_t_nu(Mf,beta,e,Gap,nu)
     return min(1, t)
 
 def alpha_lloo(k, hess, alpha_k, h_k, r_k, sigma_f, Mf, diam_X,rho):
@@ -90,15 +78,74 @@ def alpha_line_search(grad_function, delta_x, beta, accuracy):
             t_lb = t
     return t
 
-def alpha_L_backtrack(func_gamma,fx,gx,delta_x,L_last,t_max):
+def alpha_L_backtrack(func_t,fx,gx,delta_x,L_last,t_max):
     tau=2
     nu=0.25
     L=nu*L_last
     qx = dot_product(gx, delta_x)
     qqx=L/2*norm(delta_x)**2
     t=min(-qx/(L*norm(delta_x)**2),t_max)
-    while func_gamma(t)>fx+t*qx+t**2*qqx:
+    while func_t(t)>fx+t*qx+t**2*qqx:
         L=tau*L
         qqx=qqx*tau
         t=min(-qx/(2*qqx),t_max)
     return t, L
+
+def alpha_M_backtrack(func_t,fx, Gap, hess_mult_delta, delta_x, Mf_last, t_max,nu):
+    tau=2
+    mult=1/4
+    Mf=mult*Mf_last
+    e = hess_mult_delta ** 0.5
+    beta = norm(delta_x)
+    #decrease is -Gap*t+omega(t*dv)*hess_mult_delta*t^2
+    #for numerical reasons, this term is simplified
+    if nu == 2:
+        decrease_nu=lambda t,dv: 1/(dv**2)*(np.exp(t*dv)-t*dv-1)*hess_mult_delta-t*Gap
+    elif nu == 3:
+        decrease_nu=lambda t,dv:(-np.log(1-t*dv))/(dv**2)*hess_mult_delta-t*(Gap+hess_mult_delta/dv)
+    elif nu == 4:
+        decrease_nu=lambda t,dv:-Gap*t+((1-t*dv)*np.log(1-t*dv)+t*dv)/(dv**2)*hess_mult_delta
+    else:
+        const =  (nu - 2) / (4 - nu)
+        const2 = (nu-2) / (2*(3-nu))
+        decrease_nu=lambda t,dv: -Gap*t+const*((const2/dv)*(((1-t*dv)**(1/const2))-1)+1)*hess_mult_delta*t
+    t, delta_v = copute_t_nu(Mf,beta,e,Gap,nu) #for current f determine by theory
+    t = min(t,t_max)
+    decrease = decrease_nu(t,delta_v)
+    while func_t(t)>fx+decrease: #checks if we exceed the upper bound
+        if decrease>0: #if we did not obtain decrease there is a numerical error
+            print('something is wrong')
+            print(f'Mf = {Mf}, Gap = {Gap}, e = {e}, delta_v={delta_v}, t={t}, t_max={t_max}, omega_val={omega_val},decrease={deacrease}')
+        Mf = tau*Mf #increase Mf
+        t, delta_v = copute_t_nu(Mf, beta, e, Gap, nu) #compute new stepsize
+        t = min(t,t_max)
+        decrease=decrease_nu(t,delta_v) #compute the decrease
+    #print(f'Mf = {Mf}, Gap = {Gap}, e = {e}, delta_v={delta_v}, t={t}, t_max={t_max}, omega_val={omega_val},decrease={deacrease}')
+    return t, Mf
+
+def alpha_sc_hybrid(func_t,fx, gx, Gap, hess_mult_delta, delta_x, L_last, Mf_last, t_max,nu):
+    #alpha_M, Mf_last=alpha_M_backtrack(func_t,fx, Gap, hess_mult_delta, delta_x, Mf_last, t_max,nu) #this is using backtracking for Mf
+    t_M=alpha_sc(Gap, hess_mult_delta, delta_x, Mf_last, nu) #this is using the theoretical Mf – no backtracking
+    t_L,L_last=alpha_L_backtrack(func_t,fx,gx,delta_x,L_last,t_max)
+    if t_M>=t_L: #pick the larger stepsize
+        t=t_M
+    else:
+        t=t_L
+    return t, L_last, Mf_last
+
+
+def copute_t_nu(Mf,beta,e,Gap,nu):
+    if nu == 2:
+        delta_v = Mf * beta
+        t = 1 / delta_v * np.log(1 + (Gap*delta_v) / ( e ** 2))
+    elif nu == 3:
+        delta_v =  Mf * e / 2
+        t = Gap / (Gap * delta_v + e ** 2)
+    else:
+        delta_v = (nu - 2) / 2 * Mf * (beta ** (3 - nu)) * e ** (nu - 2)
+        if nu == 4:
+            t = 1 / delta * (1 - np.exp(-delta_v * Gap / (e ** 2)))
+        elif nu < 4 and nu > 2:
+            const = (4 - nu) / (nu - 2)
+            t = 1 / delta * (1 - (1 + (-delta_v * Gap * const / (e ** 2))) ** (-1 / const))
+    return t, delta_v

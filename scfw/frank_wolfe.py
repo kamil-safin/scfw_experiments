@@ -102,9 +102,34 @@ def frank_wolfe(fun_x,
                 beta = 1
             my_grad_beta = lambda beta: grad_beta(x, s, beta, extra_param, extra_param_s)
             alpha = alpha_line_search(my_grad_beta, -delta_x, beta, line_search_tol)
-        elif alpha_policy == 'icml':
+        elif alpha_policy == 'sc':
             hess_mult = hess_mult_x(s - x, extra_param)
-            alpha = alpha_icml(Gap, hess_mult, -delta_x, Mf, nu)
+            alpha = alpha_sc(Gap, hess_mult, -delta_x, Mf, nu)
+        elif alpha_policy == 'sc_backtracking':
+            hess_mult = hess_mult_x(s - x, extra_param)
+            if k==1:
+                Mf_last=Mf/1e+8
+            extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
+            if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
+                indexes=np.where(extra_param_s<=0)
+                beta_max=min(extra_param(indexes)/(extra_param(indexes)-extra_param_s(indexes)))
+            else:
+                beta_max=1
+            my_func_beta = lambda beta: func_beta(x,s,beta,extra_param,extra_param_s)[0]
+            alpha, Mf_last = alpha_M_backtrack(my_func_beta, f, Gap, hess_mult,-delta_x,Mf_last,beta_max,nu)
+        elif alpha_policy == 'sc_hybrid':
+            hess_mult = hess_mult_x(s - x, extra_param)
+            if k==1:
+                Mf_last=Mf
+                L_last=1
+            extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
+            if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
+                indexes=np.where(extra_param_s<=0)
+                beta_max=min(extra_param(indexes)/(extra_param(indexes)-extra_param_s(indexes)))
+            else:
+                beta_max=1
+            my_func_beta = lambda beta: func_beta(x,s,beta,extra_param,extra_param_s)[0]
+            alpha,L_last, Mf_last=alpha_sc_hybrid(my_func_beta,f, grad, Gap, hess_mult, -delta_x, L_last, Mf_last, beta_max,nu)
         elif alpha_policy == 'lloo':
             s2 = s.copy()
             delta_x2 = delta_x.copy()
