@@ -61,7 +61,7 @@ def frank_wolfe(fun_x,
     for k in range(1, max_iter + 1):
         start_time = time.time()
         f, extra_param = fun_x(x)
-        if min(extra_param) < -1e-10: #this is a way to know if the gradient is defined on x
+        if (extra_param.ndim != 2) and (min(extra_param) < -1e-10): #this is a way to know if the gradient is defined on x
             print(extra_param)
             print("gradient is not defined")
             break
@@ -164,24 +164,24 @@ def frank_wolfe(fun_x,
         Gap_hist.append(Gap)
         f_hist.append(f)
         x = x_nxt
-
-        if f<upper_bound:
-            upper_bound=f
+        print('f: %f Gap: %e' % (f, Gap))
+        if f < upper_bound:
+            upper_bound = f
             x_best=x.copy()
         lower_bound = max(lower_bound, f - Gap)
-        if (lower_bound-upper_bound)/abs(lower_bound)>1e-10:
+        if (lower_bound - upper_bound) / abs(lower_bound) > 1e-10:
         #    print(lower_bound)
         #    print(upper_bound)
-            temp=x + alpha * (s - x)
-            print(x)
-            print(np.linalg.norm(x,1),sum(abs(x)))
-            print(np.linalg.norm(s,1),sum(abs(s)))
-            print(np.linalg.norm(temp,1),sum(abs(temp)))
-            print(f,fun_x(x)[0],fun_x(s)[0],fun_x(temp)[0])
-            print(Gap,grad.T.dot(x-s))
-            print(grad)
-            print(s)
-            print(x-s)
+            temp = x + alpha * (s - x)
+            #print(x)
+            #print(np.linalg.norm(x,1),sum(abs(x)))
+            #print(np.linalg.norm(s,1),sum(abs(s)))
+            #print(np.linalg.norm(temp,1),sum(abs(temp)))
+            #print(f,fun_x(x)[0],fun_x(s)[0],fun_x(temp)[0])
+            #print(Gap,grad.T.dot(x-s))
+            #print(grad)
+            #print(s)
+            #print(x-s)
             sys.exit("lower bound bigger than upper bound")
         real_Gap=upper_bound-lower_bound
         # filling history
