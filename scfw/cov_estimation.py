@@ -28,9 +28,15 @@ def cov_hess_mult(S, inv_X):
 def linear_oracle(grad):
     i_max, j_max = np.unravel_index(np.argmax(np.abs(grad)), grad.shape)
     S = np.zeros(grad.shape)
-    S[j_max, i_max] = -1 * np.sign(grad[i_max, j_max])
+    if i_max==j_max:
+        S[j_max, i_max] = -1 * np.sign(grad[i_max, j_max])
+    else:
+        S[j_max, i_max] = -1/2 * np.sign(grad[i_max, j_max])
+        S[i_max, j_max] = S[j_max, i_max]
     return S
 
+
+#this is not the right projection
 def proj_map(X):
     v, U = sc.eigh(X)
     #check for numerical stability
