@@ -25,13 +25,13 @@ def cov_hess_mult(S, inv_X):
     hess_mult_vec = cov_hess_mult_vec(S, inv_X)
     return hess_mult_vec.dot(S)
 
-def linear_oracle(grad):
+def linear_oracle(grad, r=1):
     i_max, j_max = np.unravel_index(np.argmax(np.abs(grad)), grad.shape)
     S = np.zeros(grad.shape)
-    if i_max==j_max:
-        S[j_max, i_max] = -1 * np.sign(grad[i_max, j_max])
+    if i_max == j_max:
+        S[j_max, i_max] = -r * np.sign(grad[i_max, j_max])
     else:
-        S[j_max, i_max] = -1/2 * np.sign(grad[i_max, j_max])
+        S[j_max, i_max] = -r/2 * np.sign(grad[i_max, j_max])
         S[i_max, j_max] = S[j_max, i_max]
     return S
 
