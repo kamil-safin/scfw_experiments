@@ -2,6 +2,9 @@ import time
 import sys
 
 import numpy as np
+import scipy as sc
+import scipy.linalg
+
 
 from .alpha_policies import *
 
@@ -87,6 +90,7 @@ def frank_wolfe(fun_x,
             if k==1:
                 L_last=1
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
+            print(extra_param_s)
             if extra_param_s.ndim==1:
                 if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
                     indexes=np.where(extra_param_s<=0)
@@ -95,12 +99,17 @@ def frank_wolfe(fun_x,
                     beta_max=1
             else:
                 L=np.linalg.cholesky(x)
-                min_eig,_=scipy.linalg.eigh(np.linalg.inv(L)@extra_param_s@np.linalg.inv(L.transpose),eigvals=(0,0))
+                print(L)
+                print(s)
+                invL=np.linalg.inv(L)
+                temp=invL@s
+                min_eig,_=scipy.linalg.eigh(temp@(invL.transpose()))
+                min_eig=min(min_eig)
                 if min_eig<0:
                     #(1-beta)*1+beta min_eig>0 => beta<=1/(1-min_eig)
-                    beta_max=1/(1-min_eig)
+                    beta_max=1/(1-min_eig)-1e-10
                 else:
-                    beta_max=1 
+                    beta_max=1
             my_func_beta = lambda beta: func_beta(x,s,beta,extra_param,extra_param_s)[0]
             alpha, L_last = alpha_L_backtrack(my_func_beta, f, grad, -delta_x,L_last,beta_max)
         elif alpha_policy == 'line_search':
