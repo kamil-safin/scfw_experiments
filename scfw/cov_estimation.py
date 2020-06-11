@@ -22,8 +22,10 @@ def cov_hess_mult_vec(S, inv_X):
     return hess.dot(S)
 
 def cov_hess_mult(S, inv_X):
-    hess_mult_vec = cov_hess_mult_vec(S, inv_X)
-    return hess_mult_vec.dot(S)
+    #hess_mult_vec = cov_hess_mult_vec(S, inv_X)
+    #return hess_mult_vec.dot(S)
+    temp = inv_X.dot(S)
+    return np.trace(temp.dot(temp))
 
 def linear_oracle(grad, r=1):
     i_max, j_max = np.unravel_index(np.argmax(np.abs(grad)), grad.shape)
