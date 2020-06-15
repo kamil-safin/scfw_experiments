@@ -64,9 +64,13 @@ def alpha_line_search(grad_function, delta_x, beta, accuracy):
     #ub = grad_function(beta).T.dot(delta_x)
     t_ub = beta
     t = t_ub
+    k = 0
     while t_ub < 1 and ub < 0:
         t_ub = 1 - (1 - t_ub) / 2
+#    while (t_ub < beta and ub < 0) or (k < 100):
+#        t_ub = beta - (beta - t_ub) / 2
         ub = dot_product(grad_function(t_ub), delta_x)
+        k += 1
         #ub = grad_function(t_ub).T.dot(delta_x)
     while t_ub - t_lb > accuracy:
         t = (t_lb + t_ub) / 2
@@ -144,8 +148,8 @@ def copute_t_nu(Mf,beta,e,Gap,nu):
     else:
         delta_v = (nu - 2) / 2 * Mf * (beta ** (3 - nu)) * e ** (nu - 2)
         if nu == 4:
-            t = 1 / delta * (1 - np.exp(-delta_v * Gap / (e ** 2)))
+            t = 1 / delta_v * (1 - np.exp(-delta_v * Gap / (e ** 2)))
         elif nu < 4 and nu > 2:
             const = (4 - nu) / (nu - 2)
-            t = 1 / delta * (1 - (1 + (-delta_v * Gap * const / (e ** 2))) ** (-1 / const))
+            t = 1 / delta_v * (1 - (1 + (-delta_v * Gap * const / (e ** 2)))) ** (-1 / const)
     return t, delta_v
