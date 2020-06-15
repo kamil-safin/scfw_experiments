@@ -9,6 +9,42 @@ import scipy.linalg
 from .alpha_policies import *
 
 
+def adjust_beta(extra_param, extra_param_s, x, s, case='general'):
+    if extra_param_s.ndim==1:
+        if case == 'line_search':
+            if min(extra_param_s) == 0: #if 0 it is not defines and beta is adjusted
+                beta = 0.5
+            else:
+                beta = 1
+            return beta
+        else:
+            if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
+                indexes = np.where(extra_param_s <= 0)
+                beta_max = min(extra_param[indexes]/(extra_param[indexes] - extra_param_s[indexes]))
+            else:
+                beta_max=1
+    else:
+        L = np.linalg.cholesky(x)
+        invL = np.linalg.inv(L)
+        temp = invL @ s
+        min_eig, _ = scipy.linalg.eigh(temp@(invL.transpose()))
+        min_eig = min(min_eig)
+        print('min_eig: %f' % min_eig)
+        if case == 'line_search':
+            if min_eig == 0: #if 0 it is not defines and beta is adjusted
+                beta = 0.5
+            else:
+                beta = 1
+            print('line_search beta_max: %f' % beta)
+            return beta
+        else:
+            if min_eig < 0:
+                #(1-beta)*1+beta min_eig>0 => beta<=1/(1-min_eig)
+                beta_max = 1/(1 - min_eig) - 1e-10
+            else:
+                beta_max = 1
+    return beta_max
+
 def frank_wolfe(fun_x,
                 func_beta,
                 grad_x,
@@ -64,10 +100,10 @@ def frank_wolfe(fun_x,
     for k in range(1, max_iter + 1):
         start_time = time.time()
         f, extra_param = fun_x(x)
-        if (extra_param.ndim != 2) and (min(extra_param) < -1e-10): #this is a way to know if the gradient is defined on x
-            print(extra_param)
-            print("gradient is not defined")
-            break
+#        if (extra_param.ndim != 2) and (min(extra_param) < -1e-10): #this is a way to know if the gradient is defined on x
+#            print(extra_param)
+#            print("gradient is not defined")
+#            break
 
         #find optimal
         grad = grad_x(x, extra_param)
@@ -90,34 +126,33 @@ def frank_wolfe(fun_x,
             if k==1:
                 L_last=1
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
-            print(extra_param_s)
-            if extra_param_s.ndim==1:
-                if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
-                    indexes=np.where(extra_param_s<=0)
-                    beta_max=min(extra_param(indexes)/(extra_param(indexes)-extra_param_s(indexes)))
-                else:
-                    beta_max=1
-            else:
-                L=np.linalg.cholesky(x)
-                print(L)
-                print(s)
-                invL=np.linalg.inv(L)
-                temp=invL@s
-                min_eig,_=scipy.linalg.eigh(temp@(invL.transpose()))
-                min_eig=min(min_eig)
-                if min_eig<0:
-                    #(1-beta)*1+beta min_eig>0 => beta<=1/(1-min_eig)
-                    beta_max=1/(1-min_eig)-1e-10
-                else:
-                    beta_max=1
+            #if extra_param_s.ndim==1:
+            #    if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
+            #        indexes=np.where(extra_param_s<=0)
+            #        beta_max=min(extra_param(indexes)/(extra_param(indexes)-extra_param_s(indexes)))
+            #    else:
+            #        beta_max=1
+            #else:
+            #    L=np.linalg.cholesky(x)
+            #    invL=np.linalg.inv(L)
+            #    temp=invL@s
+            #    min_eig,_=scipy.linalg.eigh(temp@(invL.transpose()))
+            #    min_eig=min(min_eig)
+            #    if min_eig<0:
+            #        #(1-beta)*1+beta min_eig>0 => beta<=1/(1-min_eig)
+            #        beta_max=1/(1-min_eig)-1e-10
+            #    else:
+            #        beta_max=1
+            beta_max = adjust_beta(extra_param, extra_param_s, x, s)
             my_func_beta = lambda beta: func_beta(x,s,beta,extra_param,extra_param_s)[0]
             alpha, L_last = alpha_L_backtrack(my_func_beta, f, grad, -delta_x,L_last,beta_max)
         elif alpha_policy == 'line_search':
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
-            if min(extra_param_s) == 0: #if 0 it is not defines and beta is adjusted
-                beta = 0.5
-            else:
-                beta = 1
+            #if min(extra_param_s) == 0: #if 0 it is not defines and beta is adjusted
+            #    beta = 0.5
+            #else:
+            #    beta = 1
+            beta = adjust_beta(extra_param, extra_param_s, x, s, case='line_search')
             my_grad_beta = lambda beta: grad_beta(x, s, beta, extra_param, extra_param_s)
             alpha = alpha_line_search(my_grad_beta, -delta_x, beta, line_search_tol)
         elif alpha_policy == 'sc':
@@ -128,11 +163,12 @@ def frank_wolfe(fun_x,
             if k==1:
                 Mf_last=Mf/1e+8
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
-            if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
-                indexes=np.where(extra_param_s<=0)
-                beta_max=min(extra_param(indexes)/(extra_param(indexes)-extra_param_s(indexes)))
-            else:
-                beta_max=1
+            #if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
+            #    indexes=np.where(extra_param_s<=0)
+            #    beta_max=min(extra_param(indexes)/(extra_param(indexes)-extra_param_s(indexes)))
+            #else:
+            #    beta_max=1
+            beta_max = adjust_beta(extra_param, extra_param_s, x, s)
             my_func_beta = lambda beta: func_beta(x,s,beta,extra_param,extra_param_s)[0]
             alpha, Mf_last = alpha_M_backtrack(my_func_beta, f, Gap, hess_mult,-delta_x,Mf_last,beta_max,nu)
         elif alpha_policy == 'sc_hybrid':
@@ -141,11 +177,12 @@ def frank_wolfe(fun_x,
                 Mf_last=Mf
                 L_last=1
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
-            if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
-                indexes=np.where(extra_param_s<=0)
-                beta_max=min(extra_param(indexes)/(extra_param(indexes)-extra_param_s(indexes)))
-            else:
-                beta_max=1
+            #if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
+            #    indexes=np.where(extra_param_s<=0)
+            #    beta_max=min(extra_param(indexes)/(extra_param(indexes)-extra_param_s(indexes)))
+            #else:
+            #    beta_max=1
+            beta_max = adjust_beta(extra_param, extra_param_s, x, s)
             my_func_beta = lambda beta: func_beta(x,s,beta,extra_param,extra_param_s)[0]
             alpha,L_last, Mf_last=alpha_sc_hybrid(my_func_beta,f, grad, Gap, hess_mult, -delta_x, L_last, Mf_last, beta_max,nu)
         elif alpha_policy == 'lloo':
@@ -174,7 +211,6 @@ def frank_wolfe(fun_x,
             delta_x = x - s
             hess_mult = hess_mult_x(delta_x, extra_param)
             alpha , h_k, r_k = alpha_new_lloo(hess_mult, h_k, r_k, Mf)
-
         x_nxt = x + alpha * (s - x)
         time_hist.append(time.time() - start_time)
         x_last = x.copy()
@@ -182,7 +218,6 @@ def frank_wolfe(fun_x,
         Gap_hist.append(Gap)
         f_hist.append(f)
         x = x_nxt
-        print('f: %f Gap: %e' % (f, Gap))
         if f < upper_bound:
             upper_bound = f
             x_best=x.copy()
@@ -218,13 +253,13 @@ def frank_wolfe(fun_x,
             print('Convergence achieved!')
             #print(f'x = {x}')
             #print(f'v = {v}')
-            print(f'iter = {k}, stepsize = {alpha}, crit = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}, real_Gap={real_Gap}')
+            print(f'iter={k}, stepsize={alpha:.2e}, criterion={criterion:.2e}, upper_bound={upper_bound}, lower_bound={lower_bound}, real_Gap={real_Gap:.2e}, f_val={f}')
             return x_best, alpha_hist, Gap_hist, f_hist, time_hist
 
 
         if k % print_every == 0 or k == 1:
             if not debug_info:
-                print(f'iter = {k}, stepsize = {alpha}, criterion = {criterion}, upper_bound={upper_bound}, lower_bound={lower_bound}, real_Gap={real_Gap}')
+                print(f'iter={k}, stepsize={alpha:.2e}, criterion={criterion:.2e}, upper_bound={upper_bound}, lower_bound={lower_bound}, real_Gap={real_Gap:.2e}, f_val={f}')
             else:
                 print(k)
                 print(f'f = {f}')
