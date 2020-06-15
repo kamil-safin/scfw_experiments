@@ -90,7 +90,7 @@ def frank_wolfe(fun_x,
             if k==1:
                 L_last=1
             extra_param_s = extra_fun(s) #this is a way to know if the gradient is defined on s
-            print(extra_param_s)
+            #print(extra_param_s)
             if extra_param_s.ndim==1:
                 if min(extra_param_s) < 0: #if 0 it is not defines and beta is adjusted
                     indexes=np.where(extra_param_s<=0)
@@ -99,8 +99,8 @@ def frank_wolfe(fun_x,
                     beta_max=1
             else:
                 L=np.linalg.cholesky(x)
-                print(L)
-                print(s)
+                #print(L)
+                #print(s)
                 invL=np.linalg.inv(L)
                 temp=invL@s
                 min_eig,_=scipy.linalg.eigh(temp@(invL.transpose()))
