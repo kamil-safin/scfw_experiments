@@ -42,19 +42,22 @@ def hess_mult(A, y, c, s, n, d, p, q, x=None, denom=None):
     val = q * (q + 1) / n * np.sum(numer * denom)
     return  val
 
-def hess_mult_vec():
-    pass
+def hess_mult_vec(A, y, c, s, n, d, p, q, x=None, denom=None):
+    if denom is None:
+        w = x[:d]
+        mu = x[d]
+        xi = x[(d + 1):]
+        denom = A @ w + mu * y + xi
+    denom = 1 / denom**(q + 2)
+    s_w = s[:d]
+    w_hess = (q * (q + 1)/ n) * (A.T @ (A @ s_w * denom))
+    mu_hess = (q * (q + 1)/ n) * ((y**2).dot(denom))
+    xi_hess = (q * (q + 1)/ n) * denom
+    return np.hstack((w_hess, mu_hess, xi_hess))
 
-
-def l1_oracle(grad, n):
-    s = np.zeros(n)
-    i_max = np.argmax(np.abs(grad))
-    s[i_max] = -1 * np.sign(grad[i_max])
-    return s
-
-def l2_oracle(grad, n):
+def l2_oracle(grad, n, R=1):
     s = -1 * grad
-    s = s / np.linalg.norm(s)
+    s = s * R / np.linalg.norm(s)
     return s
 
 def linear_oracle(grad, d, p, R, u):
@@ -62,9 +65,19 @@ def linear_oracle(grad, d, p, R, u):
     mu_grad = grad[d]
     xi_grad = grad[(d + 1):]
     w_s = l2_oracle(w_grad, d)
-    xi_s = l2_oracle(xi_grad, p)
+    xi_s = l2_oracle(xi_grad, p, R=R)
     mu_s = -1 * u * np.sign(mu_grad)
     return np.hstack((w_s, mu_s, xi_s))
 
-def projection():
-    pass
+def l2_projection(x, n, R=1):
+    x = x * R / np.linalg.norm(x)
+    return x
+
+def projection(x, n, d, p, R, u):
+    w = x[:d]
+    mu = x[d]
+    xi = x[(d + 1):]
+    w_pr = l2_projection(w, d)
+    xi_pr = l2_projection(xi, p, R=R)
+    mu_pr = u * np.sign(mu)
+    return np.hstack((w_pr, mu_pr, xi_pr))
