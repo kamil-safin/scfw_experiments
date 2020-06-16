@@ -61,17 +61,15 @@ def alpha_new_lloo(hess_mult, h_k, r_k, Mf):
 def alpha_line_search(grad_function, delta_x, beta, accuracy):
     t_lb = 0
     ub = dot_product(grad_function(beta), delta_x)
-    #ub = grad_function(beta).T.dot(delta_x)
     t_ub = beta
     t = t_ub
     k = 0
     while t_ub < 1 and ub < 0:
         t_ub = 1 - (1 - t_ub) / 2
-#    while (t_ub < beta and ub < 0) or (k < 100):
-#        t_ub = beta - (beta - t_ub) / 2
         ub = dot_product(grad_function(t_ub), delta_x)
         k += 1
         #ub = grad_function(t_ub).T.dot(delta_x)
+    print('t_ub: %f' % t_ub)
     while t_ub - t_lb > accuracy:
         t = (t_lb + t_ub) / 2
         val = dot_product(grad_function(t), delta_x)

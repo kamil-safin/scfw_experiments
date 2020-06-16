@@ -26,10 +26,9 @@ def adjust_beta(extra_param, extra_param_s, x, s, case='general'):
     else:
         L = np.linalg.cholesky(x)
         invL = np.linalg.inv(L)
-        temp = invL @ s
+        temp = invL @ (s - x)
         min_eig, _ = scipy.linalg.eigh(temp@(invL.transpose()))
         min_eig = min(min_eig)
-        print('min_eig: %f' % min_eig)
         if case == 'line_search':
             if min_eig == 0: #if 0 it is not defines and beta is adjusted
                 beta = 0.5
@@ -40,9 +39,10 @@ def adjust_beta(extra_param, extra_param_s, x, s, case='general'):
         else:
             if min_eig < 0:
                 #(1-beta)*1+beta min_eig>0 => beta<=1/(1-min_eig)
-                beta_max = 1/(1 - min_eig) - 1e-10
+                beta_max = min(1, 1 / abs(min_eig))
             else:
                 beta_max = 1
+        print('beta_max: %f' % beta_max)
     return beta_max
 
 def frank_wolfe(fun_x,
@@ -152,12 +152,12 @@ def frank_wolfe(fun_x,
             #    beta = 0.5
             #else:
             #    beta = 1
-            beta = adjust_beta(extra_param, extra_param_s, x, s, case='line_search')
-            my_grad_beta = lambda beta: grad_beta(x, s, beta, extra_param, extra_param_s)
+            beta = adjust_beta(extra_param, extra_param_s, x, s)
+            my_grad_beta = lambda beta: grad_beta(x, s, beta, extra_param, extra_param_s)          
             alpha = alpha_line_search(my_grad_beta, -delta_x, beta, line_search_tol)
         elif alpha_policy == 'sc':
             hess_mult = hess_mult_x(s - x, extra_param)
-            alpha = alpha_sc(Gap, hess_mult, -delta_x, Mf, nu)
+            alpha = alpha_sc(Gap, hess_mult, -delta_x, Mf, nu)           
         elif alpha_policy == 'sc_backtracking':
             hess_mult = hess_mult_x(s - x, extra_param)
             if k==1:
