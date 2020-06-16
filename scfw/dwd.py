@@ -50,9 +50,10 @@ def hess_mult_vec(A, y, c, s, n, d, p, q, x=None, denom=None):
         denom = A @ w + mu * y + xi
     denom = 1 / denom**(q + 2)
     s_w = s[:d]
-    w_hess = (q * (q + 1)/ n) * (A.T @ (A @ s_w * denom))
-    mu_hess = (q * (q + 1)/ n) * ((y**2).dot(denom))
-    xi_hess = (q * (q + 1)/ n) * denom
+    new_vec=A @ s_w + y * s[d] + s[d+1:n] #(A,y,I).T @ ((A,y,I)@ s *denom)
+    w_hess = (q * (q + 1)/ n) * (A.T @ (new_vec * denom))
+    mu_hess = (q * (q + 1)/ n) * ((y*new_vec).dot(denom))
+    xi_hess = (q * (q + 1)/ n) * new_vec*denom
     return np.hstack((w_hess, mu_hess, xi_hess))
 
 def l2_oracle(grad, n, R=1):
