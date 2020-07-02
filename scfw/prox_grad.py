@@ -28,6 +28,22 @@ def dot_product(x, y):
         print('Invalid dimension')
         return None
 
+def estimate_lipschitz(hess_mult_vec, n, ndim):
+    Lest = 1
+    if ndim == 1:
+        dirr = np.ones(n)
+    elif ndim == 2:
+        dirr = np.eye(n)
+    if Lest == 1:
+        # Estimate Lipschitz Constant
+        for _ in range(1, 16):
+            Dir = hess_mult_vec(dirr)
+            dirr = Dir / norm(Dir)
+        Hd = hess_mult_vec(dirr)
+        dHd = dot_product(dirr, Hd)
+        L = dHd / (dot_product(dirr, dirr))
+    return L
+
 def estimate_lipschitz_bb(x, x_old, grad, grad_old, bb_type=2):
     s = x - x_old
     y = grad - grad_old
@@ -152,11 +168,11 @@ def prox_grad(func_x,
         time_hist.append(time() - int_start)
         nrm_dx = norm(diffx)
         rdiff = nrm_dx / max(1.0, norm(x_cur))
+        f_hist.append(f)
         
         if (rdiff <= eps) and (k > 1):
             print('Convergence achieved!')
             print('iter = %4d, stepsize = %3.3e, rdiff = %3.3e,value=%g' % (k, alpha, rdiff, f))
-            f_hist.append(f)
             break
 
         if (k % print_every == 0) or (k == 1):
