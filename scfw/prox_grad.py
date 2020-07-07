@@ -14,7 +14,7 @@ def norm(x):
     else:
         print('Invalid dimension')
         return None
-    
+
 def dot_product(x, y):
     '''
     dot product for vector or matrix
@@ -130,7 +130,7 @@ def prox_grad(func_x,
           prox_params,
           eps=0.001,
           print_every=100):
-    
+
     max_iter = prox_params['iter_prox']
     bb_type = prox_params['bb_type']
     n = x0.shape[0]
@@ -151,7 +151,8 @@ def prox_grad(func_x,
         def Hopr(s): return H.dot(s)
         def grad_func(xx): return Hopr(xx - x_cur) + grad_cur
         def Quad(xx): return ((H.dot(xx - x_cur)).dot(xx - x_cur))*0.5 + dot_product(grad_cur, xx - x_cur)
-        x_nxt = fista(Quad, grad_func, prox_func, Hopr, x_cur, prox_params)
+        x_nxt = fista(Quad, grad_func, prox_func, Hopr, x_cur, prox_params) #we can do this in closed form
+        x_nxt = prox_func(x_cur-1/Lips_cur*grad_cur)
 
         diffx = x_nxt - x_cur
         if norm(diffx)<1e-10:
@@ -159,7 +160,7 @@ def prox_grad(func_x,
 
         lam_k = np.sqrt((H.dot(diffx)).dot(diffx))
         beta_k = Mf * norm(diffx)
-        
+
         alpha = min(beta_k / (lam_k * (lam_k + beta_k)), 1.)
         alpha_hist.append(alpha)
         x_old = x_cur
@@ -169,7 +170,7 @@ def prox_grad(func_x,
         nrm_dx = norm(diffx)
         rdiff = nrm_dx / max(1.0, norm(x_cur))
         f_hist.append(f)
-        
+
         if (rdiff <= eps) and (k > 1):
             print('Convergence achieved!')
             print('iter = %4d, stepsize = %3.3e, rdiff = %3.3e,value=%g' % (k, alpha, rdiff, f))
