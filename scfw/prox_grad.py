@@ -123,7 +123,6 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params, print_fista=False):
 
 def prox_grad(func_x,
           grad_x,
-          hess_mult_vec,
           prox_func,
           Mf,
           x0,
@@ -141,12 +140,12 @@ def prox_grad(func_x,
     x_old = 0
     grad_old = 0
     f_hist, time_hist, alpha_hist = [], [], []
-    int_start = time()
     time_hist.append(0)
     for k in range(1, max_iter + 1):
+        int_start = time()
         f, extra_param = func_x(x_cur)
         grad_cur = grad_x(x_cur, extra_param)
-        hess_mult_vec_x = lambda x: hess_mult_vec(x, extra_param)
+        #hess_mult_vec_x = lambda x: hess_mult_vec(x, extra_param)
         #Lips_cur = estimate_lipschitz(hess_mult_vec_x, n=n, ndim=ndim)
         Lips_cur = estimate_lipschitz_bb(x_cur, x_old, grad_cur, grad_old, bb_type=bb_type)
         H = Lips_cur * np.eye(n)
