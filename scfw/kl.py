@@ -18,7 +18,7 @@ def grad(W, y, lam, x, dot_product=None):
         sys.exit('x is not nonnegative')
     t = x[-1]
     x = x[:-1]
-    first_part = W.T.dot(np.log(dot_product / y))
+    first_part = W.T.dot(np.log(dot_product / y + 1e-10))
     return np.hstack((first_part, lam))
 
 def hess_mult(W, y, lam, s, dot_product):
@@ -61,9 +61,11 @@ def proj_simplex(y):
     Py = np.maximum(y - t, np.zeros(n))
     return Py
 
-def projection(y):
+def projection(y, x):
     t = y[-1]
+    r = x[-1]
     y = y[:-1]
     P_y = proj_simplex(y)
-    P_y = P_y * abs(t)
-    return np.hstack((P_y, np.max((t, 1e-10))))
+    P_y = P_y * r
+    return np.hstack((P_y, np.max((t, 1e-5))))
+    #return np.hstack((P_y, np.abs(t)))

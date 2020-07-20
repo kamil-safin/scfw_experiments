@@ -148,15 +148,21 @@ def prox_grad(func_x,
         #hess_mult_vec_x = lambda x: hess_mult_vec(x, extra_param)
         #Lips_cur = estimate_lipschitz(hess_mult_vec_x, n=n, ndim=ndim)
         Lips_cur = estimate_lipschitz_bb(x_cur, x_old, grad_cur, grad_old, bb_type=bb_type)
-        H = Lips_cur * np.eye(n)
+        #H = Lips_cur * np.eye(n)
         #def Hopr(s): return H.dot(s)
         #def grad_func(xx): return Hopr(xx - x_cur) + grad_cur
         #def Quad(xx): return ((H.dot(xx - x_cur)).dot(xx - x_cur))*0.5 + dot_product(grad_cur, xx - x_cur)
         #x_nxt = fista(Quad, grad_func, prox_func, Hopr, x_cur, prox_params) #we can do this in closed form
         x_nxt = prox_func(x_cur - 1/Lips_cur * grad_cur, Lips_cur)
         diffx = x_nxt - x_cur
-        nrm_dx = norm(diffx)
-        lam_k = np.sqrt((H.dot(diffx)).dot(diffx))
+        try:
+            nrm_dx = norm(diffx)
+        except ValueError:
+            print(x_cur)
+            print(x_nxt)
+        #lam_k = np.sqrt((H.dot(diffx)).dot(diffx))
+        #lam_k = np.sqrt(Lips_cur * diffx.dot(diffx))
+        lam_k = np.sqrt(Lips_cur * dot_product(diffx, diffx))
         beta_k = Mf * norm(diffx)
         if backtracking:
             for _ in range(btk_iters):
@@ -165,11 +171,13 @@ def prox_grad(func_x,
                 else:
                     Lips_cur = Lips_cur / 2
                     x_nxt = prox_func(x_cur - 1/Lips_cur * grad_cur, Lips_cur)
-            
-        diffx = x_nxt - x_cur
-        nrm_dx = norm(diffx)
-        lam_k = np.sqrt((H.dot(diffx)).dot(diffx))
-        beta_k = Mf * norm(diffx)
+        
+        if backtracking:
+            diffx = x_nxt - x_cur
+            nrm_dx = norm(diffx)
+            #lam_k = np.sqrt((H.dot(diffx)).dot(diffx))
+            lam_k = np.sqrt(Lips_cur * dot_product(diffx, diffx))
+            beta_k = Mf * norm(diffx)
         alpha = min(beta_k / (lam_k * (lam_k + beta_k)), 1.)
         alpha_hist.append(alpha)
         x_old = x_cur

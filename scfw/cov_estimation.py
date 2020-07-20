@@ -17,9 +17,13 @@ def cov_grad(A, X, inv_X=None):
 def cov_hess(inv_X):
     return np.tensordot(inv_X, inv_X)
 
-def cov_hess_mult_vec(S, inv_X):
-    hess = cov_hess(inv_X)
-    return hess.dot(S)
+#def cov_hess_mult_vec(S, inv_X):
+#    hess = cov_hess(inv_X)
+#    return hess.dot(S)
+
+
+def cov_hess_mult_vec(S, param):
+    return param.dot(S.dot(param))
 
 def cov_hess_mult(S, inv_X):
     #hess_mult_vec = cov_hess_mult_vec(S, inv_X)
@@ -37,18 +41,13 @@ def linear_oracle(grad, r=1):
         S[i_max, j_max] = S[j_max, i_max]
     return S
 
-
-#this is not the right projection
-def proj_map(X):
-    v, U = sc.eigh(X)
-    #check for numerical stability
-    n1 = sc.norm(X - U @ np.diag(v) @ np.conjugate(U).T)
-    if n1 > 1e-10:
-        print(n1)
-        print('eigen value decomposition not accurate!')
-    v_plus = np.maximum(v,0)
-    if sum(v_plus) <= 1:
-        v_proj = v_plus
+def projection(y, r):
+    shape = y.shape
+    y = y.flatten()
+    if np.linalg.norm(y,1) <= r:
+        return np.reshape(y, newshape=shape)
     else:
-        v_proj = proj_simplex(v)
-    return U @ np.diag(v_proj) @ np.conjugate(U).T
+        y_abs = np.abs(y / r)
+        P_y_abs = proj_simplex(y_abs)
+        P_y = P_y_abs * np.sign(y) * r
+    return np.reshape(P_y, newshape=shape)
