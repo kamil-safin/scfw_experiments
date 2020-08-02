@@ -69,7 +69,6 @@ def alpha_line_search(grad_function, delta_x, beta, accuracy):
         ub = dot_product(grad_function(t_ub), delta_x)
         k += 1
         #ub = grad_function(t_ub).T.dot(delta_x)
-    print('t_ub: %f' % t_ub)
     while t_ub - t_lb > accuracy:
         t = (t_lb + t_ub) / 2
         val = dot_product(grad_function(t), delta_x)

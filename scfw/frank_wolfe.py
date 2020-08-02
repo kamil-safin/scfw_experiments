@@ -29,20 +29,11 @@ def adjust_beta(extra_param, extra_param_s, x, s, case='general'):
         temp = invL @ (s - x)
         min_eig, _ = scipy.linalg.eigh(temp@(invL.transpose()))
         min_eig = min(min_eig)
-        if case == 'line_search':
-            if min_eig == 0: #if 0 it is not defines and beta is adjusted
-                beta = 0.5
-            else:
-                beta = 1
-            print('line_search beta_max: %f' % beta)
-            return beta
+        if min_eig < 0:
+            #(1-beta)*1+beta min_eig>0 => beta<=1/(1-min_eig)
+            beta_max = min(1, 1 / abs(min_eig) - 1e-5)
         else:
-            if min_eig < 0:
-                #(1-beta)*1+beta min_eig>0 => beta<=1/(1-min_eig)
-                beta_max = min(1, 1 / abs(min_eig))
-            else:
-                beta_max = 1
-        print('beta_max: %f' % beta_max)
+            beta_max = 1
     return beta_max
 
 def frank_wolfe(fun_x,
@@ -107,7 +98,7 @@ def frank_wolfe(fun_x,
 
         #find optimal
         grad = grad_x(x, extra_param)
-        s = linear_oracle(grad)
+        s = linear_oracle(grad, x)
         delta_x = x - s
         if x.ndim == 1:
             Gap = grad @ delta_x
@@ -152,7 +143,7 @@ def frank_wolfe(fun_x,
             #    beta = 0.5
             #else:
             #    beta = 1
-            beta = adjust_beta(extra_param, extra_param_s, x, s)
+            beta = adjust_beta(extra_param, extra_param_s, x, s, case='line_search')
             my_grad_beta = lambda beta: grad_beta(x, s, beta, extra_param, extra_param_s)          
             alpha = alpha_line_search(my_grad_beta, -delta_x, beta, line_search_tol)
         elif alpha_policy == 'sc':
@@ -222,7 +213,10 @@ def frank_wolfe(fun_x,
             upper_bound = f
             x_best=x.copy()
         lower_bound = max(lower_bound, f - Gap)
-        if (lower_bound - upper_bound) / abs(lower_bound) > 1e-10:
+        if (lower_bound - upper_bound) / abs(lower_bound) > 1e-3:
+            print(f'upper bound: {upper_bound}')
+            print(f'lower bound: {lower_bound}')
+            print(f'bound gap: {(lower_bound - upper_bound) / abs(lower_bound)}')
         #    print(lower_bound)
         #    print(upper_bound)
             temp = x + alpha * (s - x)
@@ -246,7 +240,7 @@ def frank_wolfe(fun_x,
         #print(upper_bound)
         #print(lower_bound)
         #criterion=(upper_bound-lower_bound)/abs(lower_bound)
-        if criterion <= eps and upper_bound-lower_bound/np.abs(lower_bound)<=eps:
+        if criterion <= eps and (upper_bound-lower_bound)/np.abs(lower_bound)<=eps:
 
             f_hist.append(f)
             f, _ = fun_x(x_best)

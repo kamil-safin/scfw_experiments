@@ -68,7 +68,7 @@ def conj_grad(Grad, Hopr, x, sc_params):
     return x_new
 
 
-def fista(func, Grad_func, prox_func, Hopr, x, sc_params):
+def fista(func, Grad_func, prox_func, Hopr, x, sc_params, print_fista=False):
     y = x.copy()
     n = len(y)
     Lest = sc_params['Lest']
@@ -120,8 +120,8 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params):
             x_nxt = z
         zdiff = z - x_cur
         ndiff = norm(zdiff)
-        if (ndiff < tol) and (k > 1):
-            print('Fista err = %3.3e; Subiter = %3d; subproblem converged!\n' % (ndiff, k))
+        if (ndiff < tol) and (k > 1) and print_fista:
+            print('Fista err = %3.3e; Subiter = %3d; subproblem converged!' % (ndiff, k))
             break
         #if (k % 100 == 0) or k==1:
         #    print('Fista err = %3.3e; Subiter = %3d; \n' % (ndiff, k))
@@ -144,9 +144,12 @@ def scopt(func_x,
           x0,
           sc_params,
           eps=0.001,
-          print_every=100):
+          print_every=100,
+          linear_oracle=None):
 
     x = x0
+    lower_bound = -np.inf
+    upper_bound = np.inf
     x_hist = []
     alpha_hist = []
     Q_hist = []
@@ -222,18 +225,35 @@ def scopt(func_x,
         err_hist.append(rdiff)
         time_hist.append(end - start)
 
-        x = x + tau_k * diffx
+        if linear_oracle is not None:
+            s = linear_oracle(Grad)
+            delta_x = x - s
+            Gap = Grad @ delta_x
+            lower_bound = max(lower_bound, Q - Gap)
+            if Q < upper_bound:
+                upper_bound = Q
+            if (i % print_every == 0) or (i == 1):
+                print('Gap: %f, lower: %f, upper: %f' % (Gap, lower_bound, upper_bound))
 
+        x = x + tau_k * diffx
+        
         # Check the stopping criterion.
-        if (rdiff <= eps) and i > 1:
+        if linear_oracle is not None:
+            if (upper_bound-lower_bound)/np.abs(lower_bound) < eps:
+                print('Convergence achieved!')
+                print('iter = %4d, stepsize = %3.3e, rdiff = %3.3e,value=%g' % (i, tau_k, rdiff, Q))
+                x_hist.append(x)
+                Q_hist.append(Q)
+                break
+        elif (rdiff <= eps) and i > 1:
             print('Convergence achieved!')
-            print('iter = %4d, stepsize = %3.3e, rdiff = %3.3e,value=%g\n' % (i, tau_k, rdiff, Q))
+            print('iter = %4d, stepsize = %3.3e, rdiff = %3.3e,value=%g' % (i, tau_k, rdiff, Q))
             x_hist.append(x)
             Q_hist.append(Q)
             break
 
         if (i % print_every == 0) or (i == 1):
-            print('iter = %4d, stepsize = %3.3e, rdiff = %3.3e , f = %g\n' % (i, tau_k, rdiff, Q))
+            print('iter = %4d, stepsize = %3.3e, rdiff = %3.3e , f = %g' % (i, tau_k, rdiff, Q))
 
         # if mod(iter, options.printst) ~= 0
         #     fprintf('iter = %4d, stepsize = %3.3e, rdiff = %3.3e\n', iter, s, rdiff);

@@ -123,7 +123,6 @@ def fista(func, Grad_func, prox_func, Hopr, x, sc_params, print_fista=False):
 
 def prox_grad(func_x,
           grad_x,
-          hess_mult_vec,
           prox_func,
           Mf,
           x0,
@@ -133,41 +132,58 @@ def prox_grad(func_x,
 
     max_iter = prox_params['iter_prox']
     bb_type = prox_params['bb_type']
+    backtracking = prox_params['backtracking']
+    btk_iters = prox_params['btk_iters']
     n = x0.shape[0]
     ndim = x0.ndim
     x_cur = x0
     x_old = 0
     grad_old = 0
     f_hist, time_hist, alpha_hist = [], [], []
-    int_start = time()
     time_hist.append(0)
     for k in range(1, max_iter + 1):
+        int_start = time()
         f, extra_param = func_x(x_cur)
         grad_cur = grad_x(x_cur, extra_param)
-        hess_mult_vec_x = lambda x: hess_mult_vec(x, extra_param)
+        #hess_mult_vec_x = lambda x: hess_mult_vec(x, extra_param)
         #Lips_cur = estimate_lipschitz(hess_mult_vec_x, n=n, ndim=ndim)
         Lips_cur = estimate_lipschitz_bb(x_cur, x_old, grad_cur, grad_old, bb_type=bb_type)
-        H = Lips_cur * np.eye(n)
-        def Hopr(s): return H.dot(s)
-        def grad_func(xx): return Hopr(xx - x_cur) + grad_cur
-        def Quad(xx): return ((H.dot(xx - x_cur)).dot(xx - x_cur))*0.5 + dot_product(grad_cur, xx - x_cur)
-        x_nxt = fista(Quad, grad_func, prox_func, Hopr, x_cur, prox_params) #we can do this in closed form
-        x_nxt = prox_func(x_cur-1/Lips_cur*grad_cur)
-
+        #H = Lips_cur * np.eye(n)
+        #def Hopr(s): return H.dot(s)
+        #def grad_func(xx): return Hopr(xx - x_cur) + grad_cur
+        #def Quad(xx): return ((H.dot(xx - x_cur)).dot(xx - x_cur))*0.5 + dot_product(grad_cur, xx - x_cur)
+        #x_nxt = fista(Quad, grad_func, prox_func, Hopr, x_cur, prox_params) #we can do this in closed form
+        x_nxt = prox_func(x_cur - 1/Lips_cur * grad_cur, Lips_cur)
         diffx = x_nxt - x_cur
-        if norm(diffx)<1e-10:
-            print('boo')
-
-        lam_k = np.sqrt((H.dot(diffx)).dot(diffx))
+        try:
+            nrm_dx = norm(diffx)
+        except ValueError:
+            print(x_cur)
+            print(x_nxt)
+        #lam_k = np.sqrt((H.dot(diffx)).dot(diffx))
+        #lam_k = np.sqrt(Lips_cur * diffx.dot(diffx))
+        lam_k = np.sqrt(Lips_cur * dot_product(diffx, diffx))
         beta_k = Mf * norm(diffx)
-
+        if backtracking:
+            for _ in range(btk_iters):
+                if Lips_cur <= ((lam_k * lam_k) / (nrm_dx * nrm_dx)):
+                    break
+                else:
+                    Lips_cur = Lips_cur / 2
+                    x_nxt = prox_func(x_cur - 1/Lips_cur * grad_cur, Lips_cur)
+        
+        if backtracking:
+            diffx = x_nxt - x_cur
+            nrm_dx = norm(diffx)
+            #lam_k = np.sqrt((H.dot(diffx)).dot(diffx))
+            lam_k = np.sqrt(Lips_cur * dot_product(diffx, diffx))
+            beta_k = Mf * norm(diffx)
         alpha = min(beta_k / (lam_k * (lam_k + beta_k)), 1.)
         alpha_hist.append(alpha)
         x_old = x_cur
         grad_old = grad_cur
         x_cur  = x_cur + alpha * diffx
         time_hist.append(time() - int_start)
-        nrm_dx = norm(diffx)
         rdiff = nrm_dx / max(1.0, norm(x_cur))
         f_hist.append(f)
 
